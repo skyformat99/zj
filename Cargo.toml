@@ -1,0 +1,10 @@
+[package]
+name = "rjms"
+version = "0.1.0"
+authors = ["fanhui <hui.fan@mail.ru>"]
+
+[dependencies]
+
+[[bin]]
+name = "rjms"
+path = "main.rs"
