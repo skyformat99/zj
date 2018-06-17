@@ -1,5 +1,5 @@
-#ifndef _COMMON_H
-#define _COMMON_H
+#ifndef _ZJ_COMMON_H
+#define _ZJ_COMMON_H
 
 #if (700 != _XOPEN_SOURCE)
 #define _XOPEN_SOURCE 700
@@ -114,4 +114,4 @@ typedef struct Error {
     ptr;\
 })
 
-#endif //_COMMON_H
+#endif //_ZJ_COMMON_H

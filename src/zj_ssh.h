@@ -1,10 +1,16 @@
+#ifndef _ZJ_SSH_H
+#define _ZJ_SSH_H
+
 #include <stdlib.h>
 #include "libssh/callbacks.h"
 
 #include "zj_common.h"
 
-Error *
-ssh_exec_once(char *cmd, _i *exit_status, char **cmd_info, size_t *cmd_info_siz, char *host, _i port, char *username, time_t conn_timeout_secs) __mustuse;
+struct zj_ssh{
+	Error * (* exec)(char *, _i *, char **, size_t *, char *, _i, char *, time_t) __mustuse;
+	Error * (* exec_default)(char *, char *, _i, char *) __mustuse;
+};
 
-Error *
-ssh_exec_once_default(char *cmd, char *host, _i port, char *username) __mustuse;
+struct zj_ssh zjssh;
+
+#endif

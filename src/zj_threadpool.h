@@ -1,5 +1,5 @@
-#ifndef THREADPOOL_H
-#define THREADPOOL_H
+#ifndef _ZJ_THREADPOOL_H
+#define _ZJ_THREADPOOL_H
 
 #include "zj_common.h"
 #include <pthread.h>

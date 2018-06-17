@@ -9,6 +9,17 @@
 
 #define __ssherr_new(__hdr) __err_new(ssh_get_error_code(__hdr), ssh_get_error(__hdr), nil)
 
+static Error *
+ssh_exec_once(char *cmd, _i *exit_status, char **cmd_info, size_t *cmd_info_siz, char *host, _i port, char *username, time_t conn_timeout_secs);
+
+static Error *
+ssh_exec_once_default(char *cmd, char *host, _i port, char *username);
+
+struct zj_ssh zjssh = {
+	.exec = ssh_exec_once,
+	.exec_default = ssh_exec_once_default,
+};
+
 __init static void
 multi_threads_env_init(void) {
     //link with -lssh_threads
@@ -58,7 +69,7 @@ chan_drop(ssh_channel *chan){
 //@param exit_status[out]: the exit_status of `cmd`
 //@param cmd_info[out]: the stdout and stderr output of `cmd`
 //@param cmd_info_siz[out]: 1 + strlen(cmd_info)
-Error *
+static Error *
 ssh_exec_once(char *cmd, _i *exit_status, char **cmd_info, size_t *cmd_info_siz,
         char *host, _i port, char *username, time_t conn_timeout_secs) {
     __drop(session_drop) ssh_session session = ssh_new();
@@ -145,7 +156,7 @@ ssh_exec_once(char *cmd, _i *exit_status, char **cmd_info, size_t *cmd_info_siz,
 }
 
 //simple wrapper of ssh_exec_once()
-Error *
+static Error *
 ssh_exec_once_default(char *cmd, char *host, _i port, char *username) {
     return ssh_exec_once(cmd, nil, nil, nil, host, port, username, 10);
 }
