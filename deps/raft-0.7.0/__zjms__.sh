@@ -5,7 +5,7 @@ rm -rf $path
 
 mkdir -p $path/lib
 if [ 0 -ne $? ]; then
-	exit 1
+    exit 1
 fi
 
 make static
