@@ -8,7 +8,8 @@ if [ 0 -ne $? ]; then
     exit 1
 fi
 
-make static
+cc -c -O2 src/* -I./include
+ar -crv libraft.a *.o
 mv libraft.a $path/lib/
 cp -r include $path/
-make clean
+rm *.o

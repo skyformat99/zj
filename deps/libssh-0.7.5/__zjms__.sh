@@ -41,7 +41,7 @@ if [ 0 -ne $? ]; then
     exit 1
 fi
 
-njobs=`cat /proc/cpuinfo | grep 'processor' | wc -l`
+njobs=`cat /proc/cpuinfo 2>/dev/null | grep 'processor' | wc -l`
 if [ 0 -eq $njobs ]; then
     njobs=2
 fi

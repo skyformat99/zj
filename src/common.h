@@ -44,7 +44,8 @@ void
 display_errchain(Error *e);
 
 #include <stdio.h>
-#include "jemalloc/jemalloc.h"
+#include <stdlib.h>
+#include "jemalloc.h"
 
 Error *
 err_new(int code, char *desc, Error *prev) {

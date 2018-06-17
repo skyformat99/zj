@@ -2,7 +2,7 @@
 
 curpath=`pwd`
 
-echo -e "\x1b[31;01mrm -rf:\x1b[00m"
+echo "rm -rf:"
 
 idx=0
 first=""
@@ -15,12 +15,12 @@ for dep in `find . -maxdepth 1 -type d`; do
     if [ 0 -eq $idx ]; then
         first=$dep/__zjms__
     else
-        echo -e "    ├── $dep/__zjms__"
+        echo "    ├── $dep/__zjms__"
     fi
 
-    let idx++
+    idx=1
 done
 
 if [ "" != $first ]; then
-    echo -e "    └── $first"
+    echo "    └── $first"
 fi
