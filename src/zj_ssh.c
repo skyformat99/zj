@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include "zj_os_target.h"
-#ifdef _OS_FREEBSD_ZJ
+#ifdef _ZJ_OS_FREEBSD
 #include <malloc_np.h>
 #else
 #include "jemalloc/jemalloc.h"
@@ -152,8 +152,8 @@ ssh_exec_once_default(char *cmd, char *host, _i port, char *username) {
 	return ssh_exec_once(cmd, nil, nil, nil, host, port, username, 10);
 }
 
-#ifdef _UNIT_TEST
-#include "threadpool.c"
+#ifdef _ZJ_UNIT_TEST
+#include "zj_threadpool.c"
 #include "convey.c"
 
 #define __threads_total 200
@@ -163,7 +163,7 @@ pthread_mutex_t mlock = PTHREAD_MUTEX_INITIALIZER;
 static void *
 thread_safe_checker(void *cnt){
     //async return, unless we waiting exit_status...
-    Error *e = ssh_exec_once("sleep 20", nil, nil, nil, "localhost", 22, __UNIT_TEST_USERNAME, 10);
+    Error *e = ssh_exec_once("sleep 20", nil, nil, nil, "localhost", 22, _ZJ_UNIT_TEST_USER, 10);
     if(nil != e){
         __display_errchain(e);
     }
@@ -207,7 +207,7 @@ Main({
         });
 
         Convey("no output", {
-            e = ssh_exec_once("ls", &exit_status, nil, &recv_siz, "localhost", 22, __UNIT_TEST_USERNAME, 3);
+            e = ssh_exec_once("ls", &exit_status, nil, &recv_siz, "localhost", 22, _ZJ_UNIT_TEST_USER, 3);
             if(nil != e) {
                 __display_errchain(e);
             }
@@ -219,7 +219,7 @@ Main({
         });
 
         Convey("no output, must fail", {
-            e = ssh_exec_once("ls /root/_", &exit_status, &recv_buf, nil, "localhost", 22, __UNIT_TEST_USERNAME, 3);
+            e = ssh_exec_once("ls /root/_", &exit_status, &recv_buf, nil, "localhost", 22, _ZJ_UNIT_TEST_USER, 3);
             if(nil != e) {
                 __display_errchain(e);
             }
@@ -231,7 +231,7 @@ Main({
         });
 
         Convey("have output", {
-            e = ssh_exec_once("ls", &exit_status, &recv_buf, &recv_siz, "localhost", 22, __UNIT_TEST_USERNAME, 3);
+            e = ssh_exec_once("ls", &exit_status, &recv_buf, &recv_siz, "localhost", 22, _ZJ_UNIT_TEST_USER, 3);
             if(nil != e) {
                 __display_errchain(e);
             }
@@ -245,7 +245,7 @@ Main({
         });
 
         Convey("have output, must fail", {
-            e = ssh_exec_once("ls /root/_", &exit_status, &recv_buf, &recv_siz, "localhost", 22, __UNIT_TEST_USERNAME, 3);
+            e = ssh_exec_once("ls /root/_", &exit_status, &recv_buf, &recv_siz, "localhost", 22, _ZJ_UNIT_TEST_USER, 3);
             if(nil != e) {
                 __display_errchain(e);
             }

@@ -1,2 +1,2 @@
-#define _OS_FREEBSD_ZJ
-#define __UNIT_TEST_USERNAME "fh"
+#define _ZJ_OS_FREEBSD
+#define _ZJ_UNIT_TEST_USER "fh"

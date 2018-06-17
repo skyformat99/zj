@@ -9,7 +9,7 @@ if [ 0 -ne $? ]; then
 fi
 
 cc ../src/zj_ssh.c\
-    -D_UNIT_TEST\
+    -D_ZJ_UNIT_TEST\
     -g -lssh -lssh_threads -lutil -lpthread\
 	-L../deps/libssh-0.7.5/__zj__/lib\
 	-I../deps/libssh-0.7.5/__zj__/include\
