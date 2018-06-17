@@ -8,14 +8,14 @@ if [ 0 -ne $? ]; then
     exit 1
 fi
 
-cc ../src/ssh_cli.c\
+cc ../src/ssh.c\
     -D_UNIT_TEST\
     -g -lssh -lssh_threads -lutil -lpthread\
 	-L../deps/libssh-0.7.5/__zjms__/lib\
 	-I../deps/libssh-0.7.5/__zjms__/include\
 	-I../src\
     -I./c-convey\
-    -o $path/ssh_cli
+    -o $path/ssh
 
 if [ 0 -ne $? ]; then
     echo "cc failed"
@@ -23,4 +23,4 @@ if [ 0 -ne $? ]; then
 fi
 
 export LD_LIBRARY_PATH="../deps/libssh-0.7.5/__zjms__/lib"
-$path/ssh_cli
+$path/ssh

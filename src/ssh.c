@@ -1,16 +1,11 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include "libssh/callbacks.h"
-
 #include "os_target.h"
-
 #ifdef _OS_FREEBSD_ZJ
 #include <malloc_np.h>
 #else
 #include "jemalloc/jemalloc.h"
 #endif
-
-#include "common.h"
+#include "ssh.h"
 
 #define __ssherr_new(__hdr) __err_new(ssh_get_error_code(__hdr), ssh_get_error(__hdr), nil)
 
@@ -63,8 +58,8 @@ chan_drop(ssh_channel *chan){
 //@param exit_status[out]: the exit_status of `cmd`
 //@param cmd_info[out]: the stdout and stderr output of `cmd`
 //@param cmd_info_siz[out]: 1 + strlen(cmd_info)
-static Error *
-exec_once(char *cmd, _i *exit_status, char **cmd_info, size_t *cmd_info_siz,
+Error *
+ssh_exec_once(char *cmd, _i *exit_status, char **cmd_info, size_t *cmd_info_siz,
         char *host, _i port, char *username, time_t conn_timeout_secs) {
     __drop(session_drop) ssh_session session = ssh_new();
     if(nil == session){
@@ -151,6 +146,12 @@ exec_once(char *cmd, _i *exit_status, char **cmd_info, size_t *cmd_info_siz,
     return nil;
 }
 
+//simple wrapper of ssh_exec_once()
+Error *
+ssh_exec_once_default(char *cmd, char *host, _i port, char *username) {
+	return ssh_exec_once(cmd, nil, nil, nil, host, port, username, 10);
+}
+
 #ifdef _UNIT_TEST
 #include "threadpool.c"
 #include "convey.c"
@@ -162,7 +163,7 @@ pthread_mutex_t mlock = PTHREAD_MUTEX_INITIALIZER;
 static void *
 thread_safe_checker(void *cnt){
     //async return, unless we waiting exit_status...
-    Error *e = exec_once("sleep 20", nil, nil, nil, "192.168.207.187", 22, "x", 10);
+    Error *e = ssh_exec_once("sleep 20", nil, nil, nil, "localhost", 22, __UNIT_TEST_USERNAME, 10);
     if(nil != e){
         __display_errchain(e);
     }
@@ -206,7 +207,7 @@ Main({
         });
 
         Convey("no output", {
-            e = exec_once("ls", &exit_status, nil, &recv_siz, "localhost", 22, __UNIT_TEST_USERNAME, 3);
+            e = ssh_exec_once("ls", &exit_status, nil, &recv_siz, "localhost", 22, __UNIT_TEST_USERNAME, 3);
             if(nil != e) {
                 __display_errchain(e);
             }
@@ -218,7 +219,7 @@ Main({
         });
 
         Convey("no output, must fail", {
-            e = exec_once("ls /root/_", &exit_status, &recv_buf, nil, "localhost", 22, __UNIT_TEST_USERNAME, 3);
+            e = ssh_exec_once("ls /root/_", &exit_status, &recv_buf, nil, "localhost", 22, __UNIT_TEST_USERNAME, 3);
             if(nil != e) {
                 __display_errchain(e);
             }
@@ -230,7 +231,7 @@ Main({
         });
 
         Convey("have output", {
-            e = exec_once("ls", &exit_status, &recv_buf, &recv_siz, "localhost", 22, __UNIT_TEST_USERNAME, 3);
+            e = ssh_exec_once("ls", &exit_status, &recv_buf, &recv_siz, "localhost", 22, __UNIT_TEST_USERNAME, 3);
             if(nil != e) {
                 __display_errchain(e);
             }
@@ -244,7 +245,7 @@ Main({
         });
 
         Convey("have output, must fail", {
-            e = exec_once("ls /root/_", &exit_status, &recv_buf, &recv_siz, "localhost", 22, __UNIT_TEST_USERNAME, 3);
+            e = ssh_exec_once("ls /root/_", &exit_status, &recv_buf, &recv_siz, "localhost", 22, __UNIT_TEST_USERNAME, 3);
             if(nil != e) {
                 __display_errchain(e);
             }
