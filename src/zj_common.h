@@ -12,7 +12,7 @@
 #define __ret_nonnull __attribute__ ((__returns_nonnull__))
 #define __prm_nonnull __attribute__ ((__nonnull__))
 
-#define __init __attribute__ ((constructor(0)))
+#define __init __attribute__ ((constructor(1000)))
 #define __init_with_pri(idx) __attribute__ ((constructor(idx)))
 #define __clean(idx) __attribute__ ((destructor(idx)))
 

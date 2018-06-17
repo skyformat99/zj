@@ -149,7 +149,7 @@ ssh_exec_once(char *cmd, _i *exit_status, char **cmd_info, size_t *cmd_info_siz,
 //simple wrapper of ssh_exec_once()
 Error *
 ssh_exec_once_default(char *cmd, char *host, _i port, char *username) {
-	return ssh_exec_once(cmd, nil, nil, nil, host, port, username, 10);
+    return ssh_exec_once(cmd, nil, nil, nil, host, port, username, 10);
 }
 
 #ifdef _ZJ_UNIT_TEST
@@ -193,8 +193,10 @@ Main({
             _i *cnt = __malloc(sizeof(_i));
             *cnt = 0;
 
-            for(_i i = 0; i < __threads_total; ++i){
+            _i i = 0;
+            while(i < __threads_total){
                 threadpool.add(thread_safe_checker, cnt);
+                ++i;
             }
 
             pthread_mutex_lock(&mlock);
