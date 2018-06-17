@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 
-path=`pwd`/__zjms__
-buildpath=`pwd`/__zjmsbuild__
+path=`pwd`/__zj__
+buildpath=`pwd`/__zjbuild__
 rm -rf $path $buildpath 2>/dev/null
 
 mkdir $buildpath

@@ -1,7 +1,7 @@
 #ifndef THREADPOOL_H
 #define THREADPOOL_H
 
-#include "common.h"
+#include "zj_common.h"
 #include <pthread.h>
 #include <semaphore.h>
 

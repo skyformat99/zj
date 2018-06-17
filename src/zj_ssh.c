@@ -1,11 +1,11 @@
 #include <stdio.h>
-#include "os_target.h"
+#include "zj_os_target.h"
 #ifdef _OS_FREEBSD_ZJ
 #include <malloc_np.h>
 #else
 #include "jemalloc/jemalloc.h"
 #endif
-#include "ssh.h"
+#include "zj_ssh.h"
 
 #define __ssherr_new(__hdr) __err_new(ssh_get_error_code(__hdr), ssh_get_error(__hdr), nil)
 

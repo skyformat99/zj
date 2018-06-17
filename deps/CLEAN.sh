@@ -10,12 +10,12 @@ for dep in `find . -maxdepth 1 -type d`; do
     if [ '.' == $dep ]; then continue; fi
     if [ '..' == $dep ]; then continue; fi
 
-    rm -rf ${dep}/__zjms__
+    rm -rf ${dep}/__zj__
 
     if [ 0 -eq $idx ]; then
-        first=$dep/__zjms__
+        first=$dep/__zj__
     else
-        echo "    ├── $dep/__zjms__"
+        echo "    ├── $dep/__zj__"
     fi
 
     idx=1

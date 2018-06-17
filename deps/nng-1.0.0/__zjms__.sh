@@ -1,15 +1,15 @@
 #!/usr/bin/env sh
 
-path=`pwd`/__zjms__
-buildpath=`pwd`/__zjmsbuild__
+path=`pwd`/__zj__
+buildpath=`pwd`/__zjbuild__
 rm -rf $path $buildpath 2>/dev/null
 
-mkdir __zjmsbuild__
+mkdir __zjbuild__
 if [ 0 -ne $? ]; then
     exit 1
 fi
 
-cd __zjmsbuild__
+cd __zjbuild__
 if [ 0 -ne $? ]; then
     exit 1
 fi

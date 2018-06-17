@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-path=`pwd`/__zjms__
+path=`pwd`/__zj__
 rm -rf $path
 
 mkdir -p $path/lib
