@@ -20,7 +20,7 @@ cmake\
     -DCMAKE_INSTALL_PREFIX=$path\
     -DCMAKE_BUILD_TYPE=Release\
     \
-    -DWITH_SERVER=ON\
+    -DWITH_SERVER=OFF\
     -DWITH_STATIC_LIB=OFF\
     -DWITH_ZLIB=ON\
     -DWITH_NACL=ON\

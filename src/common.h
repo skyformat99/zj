@@ -12,7 +12,8 @@
 #define __ret_nonnull __attribute__ ((__returns_nonnull__))
 #define __prm_nonnull __attribute__ ((__nonnull__))
 
-#define __init(idx) __attribute__ ((constructor(idx)))
+#define __init __attribute__ ((constructor(0)))
+#define __init_with_pri(idx) __attribute__ ((constructor(idx)))
 #define __clean(idx) __attribute__ ((destructor(idx)))
 
 #define __drop(cb) __attribute__ ((cleanup(cb))) // release object when it is out of scope
@@ -40,8 +41,6 @@ typedef struct Error {
     int line;
     const char *func;
 } Error;
-
-#include <stdio.h>
 
 #define __err_new(__code/*int*/, __desc/*str*/, __prev/*Error_ptr*/) ({\
     Error *new = malloc(sizeof(Error));\
@@ -83,7 +82,7 @@ typedef struct Error {
                 "   ├── file: %s\n"\
                 "   ├── line: %d\n"\
                 "   └── func: %s\n",\
-				err->code,\
+                err->code,\
                 err->desc,\
                 err->file,\
                 err->line,\
@@ -105,5 +104,14 @@ typedef struct Error {
 #define __info(__msg) do{\
     fprintf(stderr, "[%s, %d, %s]: %s\n", __FILE__, __LINE__, __func__, __msg);\
 }while(0)
+
+#define __malloc(__siz) ({\
+    void *ptr = malloc(__siz);\
+    if(nil == ptr){\
+        __info("the fucking world is over!!!!");\
+        exit(1);\
+    };\
+    ptr;\
+})
 
 #endif //_COMMON_H
