@@ -151,14 +151,57 @@ exec_once(char *cmd, _i *exit_status, char **cmd_info, size_t *cmd_info_siz,
 	return nil;
 }
 
+//#define _UNIT_TEST
 #ifdef _UNIT_TEST
+#define _XOPEN_SOURCE 700
+#include "threadpool.c"
 #include "convey.c"
+
+#define __threads_total 200
+pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+pthread_mutex_t mlock = PTHREAD_MUTEX_INITIALIZER;
+
+static void *
+thread_safe_checker(void *cnt){
+    exec_once("find /etc", nil, nil, nil, "localhost", 22, __UNIT_TEST_USERNAME, 3);
+
+	pthread_mutex_lock(&mlock);
+	if(__threads_total == ++(*((_i *) cnt))){
+		pthread_cond_signal(&cond);
+	}
+	pthread_mutex_unlock(&mlock);
+
+	return nil;
+}
+
 Main({
     Test("ssh cli tests", {
         Error *e = nil;
 		_i exit_status = 0;
 		char *recv_buf = nil;
 		size_t recv_siz = 0;
+
+        Convey("thread safe", {
+			e = threadpool.init(__threads_total, __threads_total+1);
+			if(nil != e){
+				__display_errchain(e);
+				exit(1);
+			}
+			_i *cnt = __malloc(sizeof(_i));
+			*cnt = 0;
+
+			for(_i i = 0; i < __threads_total; ++i){
+				threadpool.add(thread_safe_checker, cnt);
+			}
+
+			pthread_mutex_lock(&mlock);
+			while(__threads_total > *cnt){
+				pthread_cond_wait(&cond, &mlock);
+			}
+			pthread_mutex_unlock(&mlock);
+
+			So(__threads_total == *cnt);
+        });
 
         Convey("no output", {
             e = exec_once("ls", &exit_status, nil, &recv_siz, "localhost", 22, __UNIT_TEST_USERNAME, 3);
@@ -185,7 +228,7 @@ Main({
         });
 
         Convey("have output", {
-            e = exec_once("ls", &exit_status, &recv_buf, &recv_siz, "localhost", 22, "fh", 3);
+            e = exec_once("ls", &exit_status, &recv_buf, &recv_siz, "localhost", 22, __UNIT_TEST_USERNAME, 3);
             if(nil != e) {
                 __display_errchain(e);
             }
@@ -199,7 +242,7 @@ Main({
         });
 
         Convey("have output, must fail", {
-            e = exec_once("ls /root/_", &exit_status, &recv_buf, &recv_siz, "localhost", 22, "fh", 3);
+            e = exec_once("ls /root/_", &exit_status, &recv_buf, &recv_siz, "localhost", 22, __UNIT_TEST_USERNAME, 3);
             if(nil != e) {
                 __display_errchain(e);
             }

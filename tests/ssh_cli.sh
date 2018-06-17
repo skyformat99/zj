@@ -10,12 +10,12 @@ fi
 
 cc ../src/ssh_cli.c\
     -D_UNIT_TEST\
-    -g -lssh -lssh_threads -lutil\
+    -g -lssh -lssh_threads -lutil -lpthread\
 	-L../deps/libssh-0.7.5/__zjms__/lib\
 	-I../deps/libssh-0.7.5/__zjms__/include\
 	-I../src\
     -I./c-convey\
-    -o $path/ssh_serv
+    -o $path/ssh_cli
 
 if [ 0 -ne $? ]; then
     echo "cc failed"
@@ -23,4 +23,4 @@ if [ 0 -ne $? ]; then
 fi
 
 export LD_LIBRARY_PATH="../deps/libssh-0.7.5/__zjms__/lib"
-$path/ssh_serv
+$path/ssh_cli

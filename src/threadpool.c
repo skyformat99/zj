@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>
 
 static Error *pool_init(_i, _i);
 static void task_new(void * (*) (void *), void *);
@@ -85,6 +86,13 @@ loop: pthread_mutex_lock(&stack_header_lock);
     pthread_exit(nil);
 }
 
+static char *limit_sem_path = nil;
+static void
+limit_sem_clean(void){
+    sem_close(threadpool.p_limit_sem);
+    sem_unlink(limit_sem_path);
+}
+
 /*
  * @param: glob_siz 系统全局线程数量上限
  * @param: siz 当前线程池初始化成功后会启动的线程数量
@@ -129,10 +137,18 @@ pool_init(_i siz, _i glob_siz){
      *     glob_siz 置为负数或 0，自动继承主进程的 handler
      */
     if(0 < glob_siz){
-        sem_unlink("__limit_sem__");
-        threadpool.p_limit_sem = sem_open("__limit_sem__", O_CREAT|O_RDWR, 0700, glob_siz);
+        char sem_name[128];
+        _i n = sprintf(sem_name, "/threadpool_sem%d", getpid());
+        threadpool.p_limit_sem = sem_open(sem_name, O_CREAT|O_EXCL, 0700, glob_siz);
         if(SEM_FAILED == threadpool.p_limit_sem){
-            return __err_new(errno, strerror(errno), nil);
+            if(EEXIST != errno){
+                return __err_new(errno, strerror(errno), nil);
+            }
+        } else {
+            limit_sem_path = __malloc(1 + n);
+            strcpy(limit_sem_path, sem_name);
+
+            atexit(limit_sem_clean);
         }
     }
 
