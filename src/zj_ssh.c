@@ -137,8 +137,6 @@ ssh_exec_once(char *cmd, _i *exit_status, char **cmd_info, size_t *cmd_info_siz,
             *cmd_info_siz += rcsiz;
             rcsiz = ssh_channel_read(chan, *cmd_info + *cmd_info_siz, __max_recv_siz - *cmd_info_siz, 0);
         }
-
-        ++(*cmd_info_siz); //sizeof('\0')
 #undef __max_recv_siz
     }
 
@@ -243,7 +241,7 @@ Main({
             So(nil != recv_buf);
             //__info(recv_buf);
             //printf("%zd, %zd\n", 1 + strlen(recv_buf), recv_siz);
-            So((1 + strlen(recv_buf)) == recv_siz);
+            So(strlen(recv_buf) == recv_siz);
         });
 
         Convey("have output, must fail", {
@@ -257,7 +255,7 @@ Main({
             So(nil != recv_buf);
             //__info(recv_buf);
             //printf("%zd, %zd\n", 1 + strlen(recv_buf), recv_siz);
-            So((1 + strlen(recv_buf)) == recv_siz);
+            So(strlen(recv_buf) == recv_siz);
         });
     });
 })
