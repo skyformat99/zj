@@ -5,7 +5,7 @@ if [ 0 -ne $? ]; then
 	exit 1
 fi
 
-./configure --prefix=`pwd`/__xdp__ --with-jemalloc-prefix=j --without-export --disable-cxx
+./configure --prefix=`pwd`/__zjms__ --with-jemalloc-prefix=j --without-export --disable-cxx
 if [ 0 -ne $? ]; then
 	exit 1
 fi
