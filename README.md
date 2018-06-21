@@ -1,2 +1,2 @@
-# rjms
-jump server system written in rust.
+# zjms
+jump server system written in C and raft.
