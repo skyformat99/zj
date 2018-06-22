@@ -13,13 +13,18 @@ if [ 0 -ne $? ]; then
 	exit 1
 fi
 
-make install_include
+njobs=`cat /proc/cpuinfo | grep 'processor' | wc -l`
+if [ 0 -eq $njobs ]; then
+	njobs=2
+fi
+
+make -j $njobs install_lib_static
 if [ 0 -ne $? ]; then
 	rm -rf $path
 	exit 1
 fi
 
-make install_lib_static
+make -j $njobs install_include
 if [ 0 -ne $? ]; then
 	rm -rf $path
 	exit 1

@@ -29,7 +29,7 @@ if [ 0 -ne $? ]; then
 fi
 
 njobs=`cat /proc/cpuinfo | grep 'processor' | wc -l`
-if [ 0 -eq njobs ]; then
+if [ 0 -eq $njobs ]; then
 	njobs=2
 fi
 
