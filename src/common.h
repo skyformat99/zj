@@ -5,11 +5,13 @@
 #define __pub __attribute__ ((visibility("default")))  // default to private(only available in *.so), when compile with `-fvisibility=hidden`
 
 #define __unuse __attribute__ ((__unused__))
-#define __ret_nonnull __attribute__((__returns_nonnull__))
-#define __prm_nonnull __attribute__((__nonnull__))
+#define __ret_nonnull __attribute__ ((__returns_nonnull__))
+#define __prm_nonnull __attribute__ ((__nonnull__))
 
-#define __init(idx) __attribute__((constructor(idx)))
-#define __clean(idx) __attribute__((destructor(idx)))
+#define __init(idx) __attribute__ ((constructor(idx)))
+#define __clean(idx) __attribute__ ((destructor(idx)))
+
+#define __drop(cb) __attribute__ ((cleanup(cb))) // release object when it is out of scope
 
 #define __auto __auto_type
 
