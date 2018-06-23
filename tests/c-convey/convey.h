@@ -88,7 +88,7 @@ extern void conveyAssertSkip(const char *, const char *, int);
 extern void conveyAssertFail(const char *, const char *, int);
 extern void conveySkip(const char *, int, const char *, ...);
 extern void conveyFail(const char *, int, const char *, ...);
-extern void conveyError(const char *, int, const char *, ...);
+extern void conveyERROR(const char *, int, const char *, ...);
 extern void conveyPrintf(const char *, int, const char *, ...);
 
 /*
@@ -254,12 +254,12 @@ extern void conveyPrintf(const char *, int, const char *, ...);
 #ifdef CONVEY_NO_VARIADICS
 #define ConveySkip(reason) conveySkip(__FILE__, __LINE__, reason)
 #define ConveyFail(reason) conveyFail(__FILE__, __LINE__, reason)
-#define ConveyError(reason) conveyError(__FILE__, __LINE__, reason)
+#define ConveyERROR(reason) conveyERROR(__FILE__, __LINE__, reason)
 #define ConveyPrintf(reason) conveyPrintf(__FILE__, __LINE__, reason)
 #else
 #define ConveySkip(...) conveySkip(__FILE__, __LINE__, __VA_ARGS__)
 #define ConveyFail(...) conveyFail(__FILE__, __LINE__, __VA_ARGS__)
-#define ConveyError(...) conveyError(__FILE__, __LINE__, __VA_ARGS__)
+#define ConveyERROR(...) conveyERROR(__FILE__, __LINE__, __VA_ARGS__)
 #define ConveyPrintf(...) conveyPrintf(__FILE__, __LINE__, __VA_ARGS__)
 #endif
 
@@ -315,7 +315,7 @@ extern void ConveySetVerbose(void);
 #define So ConveySo
 #define Skip ConveySkip
 #define Fail ConveyFail
-#define Error ConveyError
+#define ERROR ConveyERROR
 #define SkipConvey ConveySkipConvey
 #define SkipSo ConveySkipSo
 #define Reset ConveyReset

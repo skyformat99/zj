@@ -220,7 +220,7 @@ convey_print_result(struct convey_ctx *t)
 		if (convey_verbose) {
 			(void) puts("");
 		}
-		convey_log_emit(t->ctx_errlog, "Errors:", convey_red);
+		convey_log_emit(t->ctx_errlog, "ERRORs:", convey_red);
 		convey_log_emit(t->ctx_faillog, "Failures:", convey_yellow);
 		if (convey_debug) {
 			convey_log_emit(t->ctx_dbglog, "Log:", convey_nocolor);
@@ -325,7 +325,7 @@ allocfail:
 		scope->cs_data = NULL;
 	}
 	if (parent != NULL) {
-		ConveyError("Unable to allocate context");
+		ConveyERROR("Unable to allocate context");
 	}
 	return (1);
 }
@@ -807,14 +807,14 @@ conveyFail(const char *file, int line, const char *fmt, ...)
 }
 
 void
-conveyError(const char *file, int line, const char *fmt, ...)
+conveyERROR(const char *file, int line, const char *fmt, ...)
 {
 	struct convey_ctx *t    = convey_get_ctx();
 	struct convey_log *flog = t->ctx_errlog;
 	struct convey_log *dlog = t->ctx_dbglog;
 	va_list            ap;
 
-	convey_logf(dlog, "* %s (%s:%d) (Error): ", t->ctx_name, file, line);
+	convey_logf(dlog, "* %s (%s:%d) (ERROR): ", t->ctx_name, file, line);
 	va_start(ap, fmt);
 	convey_vlogf(dlog, fmt, ap, 1);
 	va_end(ap);
