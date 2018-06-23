@@ -10,7 +10,7 @@ fi
 
 cc ../src/ssh_serv.c ../src/threadpool.c\
     -D_UNIT_TEST\
-    -g -std=c99 -lssh -lssh_threads -lutil\
+    -g -lssh -lssh_threads -lutil\
 	-L../deps/libssh-0.7.5/__zjms__/lib\
 	-I../deps/libssh-0.7.5/__zjms__/include\
 	-I../src\
