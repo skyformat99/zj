@@ -8,7 +8,7 @@ if [ 0 -ne $? ]; then
 	exit 1
 fi
 
-cc -Wall -Wextra -g -lssh -lssh_threads -D_UNIT_TEST -I../tests/c-convey ssh_serv.c threadpool.c -o $path/ssh_serv_TEST
+cc -g -lssh -lssh_threads -D_UNIT_TEST -I../tests/c-convey ssh_serv.c threadpool.c -o $path/ssh_serv_TEST
 if [ 0 -ne $? ]; then
 	echo "cc failed"
 	exit 1
