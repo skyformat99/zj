@@ -30,4 +30,5 @@ struct thread_pool {
     sem_t *p_limit_sem;
 };
 
+struct thread_pool threadpool;
 #endif
