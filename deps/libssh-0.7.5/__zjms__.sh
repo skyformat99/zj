@@ -10,6 +10,10 @@ if [ 0 -ne $? ]; then
     exit 1
 fi
 
+if [ "Darwin" == `uname -s` ]; then
+	export OPENSSL_ROOT_DIR=/usr/local/opt/openssl
+fi
+
 # WITH_NACL：依赖 libnacl，提供curve25519加密算法(Curve25519是一个椭圆曲线,提供128位的安全性,并设计用于椭圆曲线Diffie-Hellman(ECDH)密钥协商方案。它是最快的ECC曲线之一,并没有被任何已知的专利所涵盖)。
 # WITH_PACP：网络调试、监控用途
 cmake\

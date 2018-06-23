@@ -41,7 +41,7 @@ if [ 0 -ne $? ]; then
     exit 1
 fi
 
-make install/strip
+make install
 if [ 0 -ne $? ]; then
     rm -rf $path $buildpath
     exit 1
