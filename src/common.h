@@ -17,9 +17,6 @@
 
 #define __drop(cb) __attribute__ ((cleanup(cb))) // release object when it is out of scope
 
-#define __auto __auto_type
-
-
 #define _c char
 #define _uc unsigned char
 
@@ -78,7 +75,7 @@ typedef struct Error {
             now->tm_min,\
             now->tm_sec);\
 \
-    __auto err = __e;\
+    Error *err = __e;\
     while(nil != err){\
         if(nil == err->desc){\
             err->desc = "";\
@@ -100,7 +97,7 @@ typedef struct Error {
 }while(0)
 
 #define __clean_errchain(__e) do{\
-    __auto err = nil;\
+    Error *err = nil;\
     while(nil != __e){\
         err = __e;\
         __e = __e->cause;\
