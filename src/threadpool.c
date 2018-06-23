@@ -6,15 +6,15 @@
 #include <string.h>
 #include <errno.h>
 
-static int pool_init(int, int);
-static int task_new(void * (*) (void *), void *);
+static Error *pool_init(_i, _i);
+static void task_new(void * (*) (void *), void *);
 
 /* 线程池栈结构 */
-static int pool_siz;
+static _i pool_siz;
 
 static struct thread_task **pool_stack;
 
-static int stack_header;
+static _i stack_header;
 static pthread_mutex_t stack_header_lock;
 
 static pthread_t tid;
@@ -39,19 +39,19 @@ meta_fn(void *_ __attribute__ ((__unused__))) {
 
     /* 线程任务桩 */
     struct thread_task *self_task = malloc(sizeof(struct thread_task));
-    if (NULL == self_task) {
+    if (nil == self_task) {
         fprintf(stderr, "%s", strerror(errno));
         exit(1);
     }
 
-    self_task->fn = NULL;
+    self_task->fn = nil;
 
-    if (0 != pthread_cond_init(&(self_task->cond_var), NULL)) {
+    if (0 != pthread_cond_init(&(self_task->cond_var), nil)) {
         fprintf(stderr, "%s", strerror(errno));
         exit(1);
     }
 
-    if (0 != pthread_mutex_init(&(self_task->cond_lock), NULL)) {
+    if (0 != pthread_mutex_init(&(self_task->cond_lock), nil)) {
         fprintf(stderr, "%s", strerror(errno));
         exit(1);
     }
@@ -63,7 +63,7 @@ loop: pthread_mutex_lock(&stack_header_lock);
         pthread_mutex_unlock(&stack_header_lock);
 
         pthread_mutex_lock(&self_task->cond_lock);
-        while (NULL == self_task->fn) {
+        while (nil == self_task->fn) {
             /* 等待任务到达 */
             pthread_cond_wait( &(self_task->cond_var), &self_task->cond_lock);
         }
@@ -71,7 +71,7 @@ loop: pthread_mutex_lock(&stack_header_lock);
 
         self_task->fn(self_task->p_param);
 
-        self_task->fn = NULL;
+        self_task->fn = nil;
         goto loop;
     } else {
         pthread_mutex_unlock(&stack_header_lock);
@@ -82,7 +82,7 @@ loop: pthread_mutex_lock(&stack_header_lock);
     pthread_cond_destroy(&(self_task->cond_var));
     free(self_task);
 
-    pthread_exit(NULL);
+    pthread_exit(nil);
 }
 
 /*
@@ -90,8 +90,8 @@ loop: pthread_mutex_lock(&stack_header_lock);
  * @param: siz 当前线程池初始化成功后会启动的线程数量
  * @return: 成功返回 0，失败返回负数
  */
-static int
-pool_init(int siz, int glob_siz) {
+static Error *
+pool_init(_i siz, _i glob_siz) {
     pthread_mutexattr_t zMutexAttr;
 
     /*
@@ -118,9 +118,8 @@ pool_init(int siz, int glob_siz) {
     stack_header = -1;
 
     /* 线程池栈结构空间 */
-    if (NULL == (pool_stack = malloc(sizeof(void *) * pool_siz))) {
-        fprintf(stderr, "%s", strerror(errno));
-        exit(1);
+    if (nil == (pool_stack = malloc(sizeof(void *) * pool_siz))) {
+		return __err_new(errno, strerror(errno), nil);
     }
 
     /*
@@ -133,33 +132,29 @@ pool_init(int siz, int glob_siz) {
         sem_unlink("__limit_sem__");
         if (SEM_FAILED ==
                 (threadpool.p_limit_sem = sem_open("__limit_sem__", O_CREAT|O_RDWR, 0700, glob_siz))) {
-            fprintf(stderr, "%s", strerror(errno));
-            exit(1);
+			return __err_new(errno, strerror(errno), nil);
         }
     }
 
-    for (int i = 0; i < pool_siz; i++) {
+    for (_i i = 0; i < pool_siz; i++) {
         if (0 != sem_trywait(threadpool.p_limit_sem)) {
-            fprintf(stderr, "%s", strerror(errno));
-            exit(1);
+			return __err_new(errno, strerror(errno), nil);
         } else {
-            if (0 != pthread_create(&tid, NULL, meta_fn, NULL)) {
-                fprintf(stderr, "%s", strerror(errno));
-                exit(1);
+            if (0 != pthread_create(&tid, nil, meta_fn, nil)) {
+				return __err_new(errno, strerror(errno), nil);
             }
         }
     }
 
-    return 0;
+    return nil;
 }
 
 
 /*
  * 线程池容量不足时，自动扩容
  * 空闲线程过多时，会自动缩容
- * @return 成功返回 0，失败返回 -1
  */
-static int
+static void
 task_new(void * (* fn) (void *), void *fn_param) {
     pthread_mutex_lock(&stack_header_lock);
 
@@ -169,7 +164,7 @@ task_new(void * (* fn) (void *), void *fn_param) {
         /* 不能超过系统全局范围线程总数限制 */
         sem_wait(threadpool.p_limit_sem);
 
-        pthread_create(&tid, NULL, meta_fn, NULL);
+        pthread_create(&tid, nil, meta_fn, nil);
 
         pthread_mutex_lock(&stack_header_lock);
     }
@@ -184,6 +179,4 @@ task_new(void * (* fn) (void *), void *fn_param) {
 
     stack_header--;
     pthread_mutex_unlock(&stack_header_lock);
-
-    return 0;
 }

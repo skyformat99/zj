@@ -17,9 +17,6 @@
 
 #define __drop(cb) __attribute__ ((cleanup(cb))) // release object when it is out of scope
 
-#define _c char
-#define _uc unsigned char
-
 #define _i int
 #define _ui unsigned int
 

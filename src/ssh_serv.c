@@ -1,9 +1,9 @@
-#include <utmp.h>
 #include <sys/ioctl.h>
 #include <sys/wait.h>
 #include <signal.h>
 #include <poll.h>
 #include <fcntl.h>
+#include <utmp.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -464,7 +464,7 @@ static void *
 session_worker(void *session) {
     ssh_event event = ssh_event_new();
     if(nil == event){
-		__info("create polling context failed");
+        __info("create polling context failed");
     } else {
         handle_session(event, session);
         ssh_event_free(event);
@@ -473,7 +473,7 @@ session_worker(void *session) {
     ssh_disconnect(session);
     ssh_free(session);
 
-	return nil;
+    return nil;
 }
 
 Error *
@@ -505,32 +505,30 @@ run(void) {
         return __ssherr_new(sshbind, nil);
     }
 
-	threadpool.init(8, 512); // if any_error occur, will exit(1)
+    e = threadpool.init(8, 512);
+    if(nil != e){
+        return __ssherr_new(sshbind, e);
+    }
 
     while(1){
         ssh_session session = ssh_new();
         if(nil == session){
             __info("allocate session failed");
-			continue;
+            continue;
         }
 
         /* Blocks until there is a new incoming connection. */
         if(SSH_ERROR != ssh_bind_accept(sshbind, session)) {
-            switch(threadpool.add(session_worker, session)) {
-                case 0:
-					break;
-                default:
-					__info("threadpool: task_new failed");
-            }
+            threadpool.add(session_worker, session);
         } else {
-			__info(ssh_get_error(sshbind));
+            __info(ssh_get_error(sshbind));
         }
     }
 
     ssh_bind_free(sshbind);
     ssh_finalize();
 
-	return nil;
+    return nil;
 }
 
 #ifdef _UNIT_TEST
@@ -538,19 +536,19 @@ run(void) {
 Main({
     Test("ssh server tests", {
         Convey("sshbind test", {
-    		ssh_init();
-    		Error *e = bind_config(ssh_bind_new());
-        	if(nil != e) {
-        	    __display_errchain(e);
-        	}
+            ssh_init();
+            Error *e = bind_config(ssh_bind_new());
+            if(nil != e) {
+                __display_errchain(e);
+            }
 
             So(nil == e);
         });
         Convey("sshd test", {
-    		Error *e = run();
-        	if(nil != e) {
-        	    __display_errchain(e);
-        	}
+            Error *e = run();
+            if(nil != e) {
+                __display_errchain(e);
+            }
 
             So(nil == e);
         });

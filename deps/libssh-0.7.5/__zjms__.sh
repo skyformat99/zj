@@ -17,7 +17,7 @@ cmake\
     -DCMAKE_BUILD_TYPE=Release\
     \
     -DWITH_SERVER=ON\
-    -DWITH_STATIC_LIB=ON\
+    -DWITH_STATIC_LIB=OFF\
     -DWITH_ZLIB=ON\
     -DWITH_NACL=ON\
     \
