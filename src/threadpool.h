@@ -1,9 +1,9 @@
 #ifndef THREADPOOL_H
 #define THREADPOOL_H
 
+#include "common.h"
 #include <pthread.h>
 #include <semaphore.h>
-#include "common.h"
 
 struct thread_task {
     pthread_cond_t cond_var;

@@ -1,7 +1,7 @@
 #ifndef _COMMON_H
 #define _COMMON_H
 
-#ifndef _XOPEN_SOURCE
+#if (700 != _XOPEN_SOURCE)
 #define _XOPEN_SOURCE 700
 #endif
 

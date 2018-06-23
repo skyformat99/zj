@@ -28,7 +28,7 @@ struct thread_pool threadpool = {
 };
 
 static void *
-meta_fn(void *_ __attribute__ ((__unused__))) {
+meta_fn(void *_ __unuse){
     pthread_detach(pthread_self());
 
     /*
@@ -39,31 +39,31 @@ meta_fn(void *_ __attribute__ ((__unused__))) {
 
     /* 线程任务桩 */
     struct thread_task *self_task = malloc(sizeof(struct thread_task));
-    if (nil == self_task) {
+    if(nil == self_task){
         fprintf(stderr, "%s", strerror(errno));
         exit(1);
     }
 
     self_task->fn = nil;
 
-    if (0 != pthread_cond_init(&(self_task->cond_var), nil)) {
+    if(0 != pthread_cond_init(&(self_task->cond_var), nil)){
         fprintf(stderr, "%s", strerror(errno));
         exit(1);
     }
 
-    if (0 != pthread_mutex_init(&(self_task->cond_lock), nil)) {
+    if(0 != pthread_mutex_init(&(self_task->cond_lock), nil)){
         fprintf(stderr, "%s", strerror(errno));
         exit(1);
     }
 
 loop: pthread_mutex_lock(&stack_header_lock);
 
-    if (stack_header < (pool_siz - 1)) {
+    if(stack_header < (pool_siz - 1)){
         pool_stack[++stack_header] = self_task;
         pthread_mutex_unlock(&stack_header_lock);
 
         pthread_mutex_lock(&self_task->cond_lock);
-        while (nil == self_task->fn) {
+        while(nil == self_task->fn){
             /* 等待任务到达 */
             pthread_cond_wait( &(self_task->cond_var), &self_task->cond_lock);
         }
@@ -91,7 +91,7 @@ loop: pthread_mutex_lock(&stack_header_lock);
  * @return: 成功返回 0，失败返回负数
  */
 static Error *
-pool_init(_i siz, _i glob_siz) {
+pool_init(_i siz, _i glob_siz){
     pthread_mutexattr_t zMutexAttr;
 
     /*
@@ -118,8 +118,8 @@ pool_init(_i siz, _i glob_siz) {
     stack_header = -1;
 
     /* 线程池栈结构空间 */
-    if (nil == (pool_stack = malloc(sizeof(void *) * pool_siz))) {
-		return __err_new(errno, strerror(errno), nil);
+    if(nil == (pool_stack = malloc(sizeof(void *) * pool_siz))){
+        return __err_new(errno, strerror(errno), nil);
     }
 
     /*
@@ -128,22 +128,24 @@ pool_init(_i siz, _i glob_siz) {
      * 子进程中调用时，
      *     glob_siz 置为负数或 0，自动继承主进程的 handler
      */
-    if (0 < glob_siz) {
+    if(0 < glob_siz){
         sem_unlink("__limit_sem__");
-        if (SEM_FAILED ==
-                (threadpool.p_limit_sem = sem_open("__limit_sem__", O_CREAT|O_RDWR, 0700, glob_siz))) {
-			return __err_new(errno, strerror(errno), nil);
+        threadpool.p_limit_sem = sem_open("__limit_sem__", O_CREAT|O_RDWR, 0700, glob_siz);
+        if(SEM_FAILED == threadpool.p_limit_sem){
+            return __err_new(errno, strerror(errno), nil);
         }
     }
 
-    for (_i i = 0; i < pool_siz; i++) {
+    _i i = 0;
+    while(i < pool_siz){
         if (0 != sem_trywait(threadpool.p_limit_sem)) {
-			return __err_new(errno, strerror(errno), nil);
+            return __err_new(errno, strerror(errno), nil);
         } else {
             if (0 != pthread_create(&tid, nil, meta_fn, nil)) {
-				return __err_new(errno, strerror(errno), nil);
+                return __err_new(errno, strerror(errno), nil);
             }
         }
+        ++i;
     }
 
     return nil;
@@ -155,10 +157,10 @@ pool_init(_i siz, _i glob_siz) {
  * 空闲线程过多时，会自动缩容
  */
 static void
-task_new(void * (* fn) (void *), void *fn_param) {
+task_new(void * (* fn) (void *), void *fn_param){
     pthread_mutex_lock(&stack_header_lock);
 
-    while (0 > stack_header) {
+    while(0 > stack_header){
         pthread_mutex_unlock(&stack_header_lock);
 
         /* 不能超过系统全局范围线程总数限制 */
