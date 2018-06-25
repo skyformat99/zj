@@ -1,5 +1,6 @@
 #!/usr/bin/env sh
 
+curdir=`pwd`
 osname=`uname -s`
 
 if [ "FreeBSD" == $osname ]; then
@@ -14,4 +15,6 @@ fi
 
 echo "#define _ZJ_UNIT_TEST_USER \"`whoami`\"" >> ./zj_os_target.h
 
-# TODO
+cd ../deps
+./BUILD.sh
+cd $curdir

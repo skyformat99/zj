@@ -164,11 +164,11 @@ static void *
 thread_safe_checker(void *cnt){
     //async return, unless we waiting exit_status...
     Error *e = ssh_exec_once("sleep 20", nil, nil, nil, "localhost", 22, _ZJ_UNIT_TEST_USER, 10);
+    pthread_mutex_lock(&mlock);
     if(nil != e){
         __display_errchain(e);
     }
 
-    pthread_mutex_lock(&mlock);
     if(__threads_total == ++(*((_i *) cnt))){
         pthread_cond_signal(&cond);
     }
