@@ -95,9 +95,9 @@ zj_recv(nng_socket sock, void **data, size_t *data_len){
 
 #define __node_total 20
 pthread_mutex_t mlock = PTHREAD_MUTEX_INITIALIZER;
-pthread_barrier_t br;
+pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 
-_i slave_cnter;
+_i slave_cnter = -1;
 
 #define __atomic_log(__e) do{\
     pthread_mutex_lock(&mlock);\
@@ -120,7 +120,11 @@ thread_worker(void *info){
         exit(1);
     }
 
-    pthread_barrier_wait(&br);
+    pthread_mutex_lock(&mlock);
+    while(-1 == slave_cnter){
+        pthread_cond_wait(&cond, &mlock);
+    }
+    pthread_mutex_unlock(&mlock);
 
     e = zjbus.dial(bi->remote_url, sock);
     if(nil != e){
@@ -159,12 +163,6 @@ Main({
         static char *leader_url = "tcp://[::1]:9000";
 
         Convey("thread_barrier mode", {
-            _i eno = pthread_barrier_init(&br, nil, 1 + __node_total);
-            if(0 != eno){
-                __info(strerror(eno));
-                exit(1);
-            }
-
             e = threadpool.init(__node_total);
             if(nil != e){
                 __atomic_log(e);
@@ -191,7 +189,10 @@ Main({
                 ++i;
             }
 
-            pthread_barrier_wait(&br);
+            pthread_mutex_lock(&mlock);
+            slave_cnter = 0;
+            pthread_mutex_unlock(&mlock);
+            pthread_cond_broadcast(&cond);
 
             i = 0;
             while(i < __node_total){
@@ -203,7 +204,6 @@ Main({
                 ++i;
             }
 
-            pthread_barrier_destroy(&br);
             So(__node_total == i);
 
             i = 0;
