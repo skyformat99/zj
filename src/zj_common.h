@@ -18,6 +18,9 @@
 
 #define __drop(cb) __attribute__ ((cleanup(cb))) // release object when it is out of scope
 
+#define _si short int
+#define _usi unsigned short int
+
 #define _i int
 #define _ui unsigned int
 

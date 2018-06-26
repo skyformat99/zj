@@ -7,7 +7,7 @@
 
 #include "zj_common.h"
 
-struct zj_nng{
+struct zj_survey{
 	Error * (*leader_new) (const char *, nng_socket *) __prm_nonnull __mustuse;
 	Error * (*voter_new) (const char *, nng_socket *) __prm_nonnull __mustuse;
 	Error * (*send) (nng_socket, void *, size_t) __prm_nonnull __mustuse;

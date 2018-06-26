@@ -15,10 +15,8 @@ struct thread_task {
 };
 
 struct thread_pool {
-    Error *(* init) (_i, _i) __mustuse;
+    Error *(* init) (_i) __mustuse;
     void (* add) (void * (*) (void *), void *);
-
-    sem_t *p_limit_sem;
 };
 
 struct thread_pool threadpool;

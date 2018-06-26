@@ -7,7 +7,7 @@
 #include <errno.h>
 #include <unistd.h>
 
-static Error *pool_init(_i, _i);
+static Error *pool_init(_i);
 static void task_new(void * (*) (void *), void *);
 
 /* 线程池栈结构 */
@@ -78,28 +78,19 @@ loop: pthread_mutex_lock(&stack_header_lock);
         pthread_mutex_unlock(&stack_header_lock);
     }
 
-    /* 释放占用的系统全局信号量并清理资源占用 */
-    sem_post(threadpool.p_limit_sem);
+    /* 清理资源占用 */
     pthread_cond_destroy(&(self_task->cond_var));
     free(self_task);
 
     pthread_exit(nil);
 }
 
-static char *limit_sem_path = nil;
-static void
-limit_sem_clean(void){
-    sem_close(threadpool.p_limit_sem);
-    sem_unlink(limit_sem_path);
-}
-
 /*
- * @param: glob_siz 系统全局线程数量上限
  * @param: siz 当前线程池初始化成功后会启动的线程数量
  * @return: 成功返回 0，失败返回负数
  */
 static Error *
-pool_init(_i siz, _i glob_siz){
+pool_init(_i siz){
     pthread_mutexattr_t zMutexAttr;
 
     /*
@@ -130,36 +121,10 @@ pool_init(_i siz, _i glob_siz){
         return __err_new(errno, strerror(errno), nil);
     }
 
-    /*
-     * 主进程程调用时，
-     *     glob_siz 置为正整数，会尝试清除已存在的旧文件，并新建信号量
-     * 子进程中调用时，
-     *     glob_siz 置为负数或 0，自动继承主进程的 handler
-     */
-    if(0 < glob_siz){
-        char sem_name[128];
-        _i n = sprintf(sem_name, "/threadpool_sem%d", getpid());
-        threadpool.p_limit_sem = sem_open(sem_name, O_CREAT|O_EXCL, 0700, glob_siz);
-        if(SEM_FAILED == threadpool.p_limit_sem){
-            if(EEXIST != errno){
-                return __err_new(errno, strerror(errno), nil);
-            }
-        } else {
-            limit_sem_path = __malloc(1 + n);
-            strcpy(limit_sem_path, sem_name);
-
-            atexit(limit_sem_clean);
-        }
-    }
-
     _i i = 0;
     while(i < pool_siz){
-        if (0 != sem_trywait(threadpool.p_limit_sem)) {
+        if (0 != pthread_create(&tid, nil, meta_fn, nil)) {
             return __err_new(errno, strerror(errno), nil);
-        } else {
-            if (0 != pthread_create(&tid, nil, meta_fn, nil)) {
-                return __err_new(errno, strerror(errno), nil);
-            }
         }
         ++i;
     }
@@ -178,12 +143,7 @@ task_new(void * (* fn) (void *), void *fn_param){
 
     while(0 > stack_header){
         pthread_mutex_unlock(&stack_header_lock);
-
-        /* 不能超过系统全局范围线程总数限制 */
-        sem_wait(threadpool.p_limit_sem);
-
         pthread_create(&tid, nil, meta_fn, nil);
-
         pthread_mutex_lock(&stack_header_lock);
     }
 

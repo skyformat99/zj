@@ -1,5 +1,6 @@
 __zj__/
 __zjbuild__/
+*.core
 
 a.out
 bin/
