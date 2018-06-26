@@ -97,6 +97,8 @@ zj_recv(nng_socket sock, void **data, size_t *data_len){
 pthread_mutex_t mlock = PTHREAD_MUTEX_INITIALIZER;
 pthread_barrier_t br;
 
+_i slave_cnter;
+
 #define __atomic_log(__e) do{\
     pthread_mutex_lock(&mlock);\
     __display_and_clean(__e);\
@@ -104,15 +106,15 @@ pthread_barrier_t br;
 }while(0)
 
 typedef struct {
-	char self_url[64];
-	char remote_url[64];
+    char self_url[64];
+    char remote_url[64];
 } bus_info;
 
 void *
-trd_worker(void *info){
-	bus_info *bi = (bus_info *)info;
+thread_worker(void *info){
+    bus_info *bi = (bus_info *)info;
     nng_socket sock;
-	Error *e = zjbus.new(bi->self_url, &sock);
+    Error *e = zjbus.new(bi->self_url, &sock);
     if(nil != e){
         __atomic_log(e);
         exit(1);
@@ -120,30 +122,40 @@ trd_worker(void *info){
 
     pthread_barrier_wait(&br);
 
-	e = zjbus.dial(bi->remote_url, sock);
-	if(nil != e){
-	    __atomic_log(e);
-	    exit(1);
-	}
+    e = zjbus.dial(bi->remote_url, sock);
+    if(nil != e){
+        __atomic_log(e);
+        exit(1);
+    }
 
-	pthread_mutex_lock(&mlock);
-	zjutils.sleep(0.1);
+    pthread_mutex_lock(&mlock);
+    zjutils.sleep(0.1);
     e = zjbus.send(sock, "", sizeof(""));
     if(nil != e){
         __display_and_clean(e);
         exit(1);
     }
-	pthread_mutex_unlock(&mlock);
+    pthread_mutex_unlock(&mlock);
+
+    e = zjbus.recv(sock, nil, nil);
+    if(nil != e){
+        __display_and_clean(e);
+        exit(1);
+    }
+
+    pthread_mutex_lock(&mlock);
+    ++slave_cnter;
+    pthread_mutex_unlock(&mlock);
 
     nng_close(sock);
-	free(bi);
+    free(bi);
 
     return nil;
 }
 
 Main({
     Test("nng bus tests", {
-		Error *e = nil;
+        Error *e = nil;
         static char *leader_url = "tcp://[::1]:9000";
 
         Convey("thread_barrier mode", {
@@ -166,12 +178,16 @@ Main({
                 exit(1);
             }
 
+            char slave_url[__node_total][64];
             _i i = 0;
             while(i < __node_total){
-				bus_info *bi = __malloc(sizeof(bus_info));
-				snprintf(bi->self_url, 64, "tcp://[::1]:%d", 9001 + i);
-				strcpy(bi->remote_url, leader_url);
-                threadpool.add(trd_worker, bi);
+                bus_info *bi = __malloc(sizeof(bus_info));
+                snprintf(bi->self_url, 64, "tcp://[::1]:%d", 9001 + i);
+                strcpy(bi->remote_url, leader_url);
+
+                strcpy(slave_url[i], bi->self_url);
+
+                threadpool.add(thread_worker, bi);
                 ++i;
             }
 
@@ -187,9 +203,30 @@ Main({
                 ++i;
             }
 
-            nng_close(sock);
             pthread_barrier_destroy(&br);
+            So(__node_total == i);
 
+            i = 0;
+            while(i < __node_total){
+                e = zjbus.dial(slave_url[i], sock);
+                if(nil != e){
+                    __atomic_log(e);
+                    exit(1);
+                }
+                ++i;
+            }
+
+            i = 0;
+            while(i < __node_total){
+                e = zjbus.send(sock, "", sizeof(""));
+                if(nil != e){
+                    __display_and_clean(e);
+                    exit(1);
+                }
+                ++i;
+            }
+
+            nng_close(sock);
             So(__node_total == i);
         });
     });
