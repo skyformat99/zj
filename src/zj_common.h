@@ -1,7 +1,7 @@
 #ifndef _ZJ_COMMON_H
 #define _ZJ_COMMON_H
 
-#if (700 != _XOPEN_SOURCE)
+#ifndef _XOPEN_SOURCE
 #define _XOPEN_SOURCE 700
 #endif
 

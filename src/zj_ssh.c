@@ -194,7 +194,7 @@ Main({
         size_t recv_siz = 0;
 
         Convey("thread safe", {
-            e = threadpool.init(__threads_total, __threads_total+1);
+            e = threadpool.init(__threads_total);
             if(nil != e){
                 __display_and_clean(e);
                 exit(1);
