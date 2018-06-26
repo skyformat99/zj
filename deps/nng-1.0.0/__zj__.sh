@@ -50,3 +50,7 @@ fi
 
 make clean
 rm -rf $buildpath
+
+if [ 0 != `ls -d ${path}/lib64 2>/dev/null | wc -l` ];then
+	ln -sv ${path}/lib64 ${path}/lib
+fi

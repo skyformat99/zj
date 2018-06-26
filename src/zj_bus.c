@@ -3,22 +3,22 @@
 
 #include "zj_bus.h"
 
-static Error * new(const char *self_id, nng_socket *sock); 
-static Error * dial(const char *remote_id, nng_socket sock);
-static Error * send(nng_socket sock, void *data, size_t data_len);
-static Error * recv(nng_socket sock, void **data, size_t *data_len);
+static Error * zj_new(const char *self_id, nng_socket *sock); 
+static Error * zj_dial(const char *remote_id, nng_socket sock);
+static Error * zj_send(nng_socket sock, void *data, size_t data_len);
+static Error * zj_recv(nng_socket sock, void **data, size_t *data_len);
 
 struct zj_bus zjbus = {
-    .new = new,
-    .dial = dial,
-    .send = send,
-    .recv = recv,
+    .new = zj_new,
+    .dial = zj_dial,
+    .send = zj_send,
+    .recv = zj_recv,
 };
 
 //@param self_id[in]: handler name
 //@param sock[out]: created handler
 static Error *
-new(const char *self_id, nng_socket *sock){
+zj_new(const char *self_id, nng_socket *sock){
     _i e = nng_bus0_open(sock);
     if (0 != e) {
         return __err_new(e, nng_strerror(e), nil);
@@ -35,7 +35,7 @@ new(const char *self_id, nng_socket *sock){
 //@param id[in]: handler name
 //@param sock[in]:
 static Error *
-dial(const char *remote_id, nng_socket sock){
+zj_dial(const char *remote_id, nng_socket sock){
     _i e = nng_dial(sock, remote_id, NULL, 0);
     if (0 != e) {
         return __err_new(e, nng_strerror(e), nil);
@@ -48,7 +48,7 @@ dial(const char *remote_id, nng_socket sock){
 //@param data[in]: data to send
 //@param data_len[in]: len of data
 static Error *
-send(nng_socket sock, void *data, size_t data_len){
+zj_send(nng_socket sock, void *data, size_t data_len){
     _i e = nng_send(sock, data, data_len, 0);
     if (0 != e) {
         return __err_new(e, nng_strerror(e), nil);
@@ -60,7 +60,7 @@ send(nng_socket sock, void *data, size_t data_len){
 //@param data[out]: must call nng_free except given 'nil'
 //@param data_len[out]: actual len of recved data
 static Error *
-recv(nng_socket sock, void **data, size_t *data_len){
+zj_recv(nng_socket sock, void **data, size_t *data_len){
     _i e;
     if(nil == data || nil == data_len){
         //only for info purpose!
@@ -90,6 +90,7 @@ recv(nng_socket sock, void **data, size_t *data_len){
 #include <unistd.h>
 
 #include "zj_threadpool.c"
+#include "zj_utils.c"
 #include "convey.c"
 
 #define __node_total 20
@@ -111,7 +112,7 @@ void *
 trd_worker(void *info){
 	bus_info *bi = (bus_info *)info;
     nng_socket sock;
-	Error *e = new(bi->self_url, &sock);
+	Error *e = zjbus.new(bi->self_url, &sock);
     if(nil != e){
         __atomic_log(e);
         exit(1);
@@ -119,15 +120,15 @@ trd_worker(void *info){
 
     pthread_barrier_wait(&br);
 
-	e = dial(bi->remote_url, sock);
+	e = zjbus.dial(bi->remote_url, sock);
 	if(nil != e){
 	    __atomic_log(e);
 	    exit(1);
 	}
 
 	pthread_mutex_lock(&mlock);
-	usleep(100 * 1000);
-    e = send(sock, "", sizeof(""));
+	zjutils.sleep(0.1);
+    e = zjbus.send(sock, "", sizeof(""));
     if(nil != e){
         __display_and_clean(e);
         exit(1);
@@ -159,7 +160,7 @@ Main({
             }
 
             nng_socket sock;
-            e = new(leader_url, &sock);
+            e = zjbus.new(leader_url, &sock);
             if(nil != e){
                 __atomic_log(e);
                 exit(1);
@@ -178,7 +179,7 @@ Main({
 
             i = 0;
             while(i < __node_total){
-                e = recv(sock, nil, nil);
+                e = zjbus.recv(sock, nil, nil);
                 if(nil != e){
                     __atomic_log(e);
                     exit(1);

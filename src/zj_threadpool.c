@@ -7,29 +7,26 @@
 #include <errno.h>
 #include <unistd.h>
 
-static Error *pool_init(_i);
-static void task_new(void * (*) (void *), void *);
+static Error *zj_pool_init(_i);
+static void zj_task_new(void * (*) (void *), void *);
 
 /* 线程池栈结构 */
-static _i pool_siz;
-
-static struct thread_task **pool_stack;
-
-static _i stack_header;
-static pthread_mutex_t stack_header_lock;
-
-static pthread_t tid;
+static _i zj_pool_siz;
+static struct thread_task **zj_pool_stack;
+static _i zj_stack_header;
+static pthread_mutex_t zj_stack_header_lock;
+static pthread_t zj_tid;
 
 /**
  * ====  对外公开的接口  ==== *
  */
 struct thread_pool threadpool = {
-    .init = pool_init,
-    .add = task_new,
+    .init = zj_pool_init,
+    .add = zj_task_new,
 };
 
 static void *
-meta_fn(void *_ __unuse){
+zj_meta_fn(void *_ __unuse){
     pthread_detach(pthread_self());
 
     /*
@@ -57,11 +54,11 @@ meta_fn(void *_ __unuse){
         exit(1);
     }
 
-loop: pthread_mutex_lock(&stack_header_lock);
+loop: pthread_mutex_lock(&zj_stack_header_lock);
 
-    if(stack_header < (pool_siz - 1)){
-        pool_stack[++stack_header] = self_task;
-        pthread_mutex_unlock(&stack_header_lock);
+    if(zj_stack_header < (zj_pool_siz - 1)){
+        zj_pool_stack[++zj_stack_header] = self_task;
+        pthread_mutex_unlock(&zj_stack_header_lock);
 
         pthread_mutex_lock(&self_task->cond_lock);
         while(nil == self_task->fn){
@@ -75,7 +72,7 @@ loop: pthread_mutex_lock(&stack_header_lock);
         self_task->fn = nil;
         goto loop;
     } else {
-        pthread_mutex_unlock(&stack_header_lock);
+        pthread_mutex_unlock(&zj_stack_header_lock);
     }
 
     /* 清理资源占用 */
@@ -90,7 +87,7 @@ loop: pthread_mutex_lock(&stack_header_lock);
  * @return: 成功返回 0，失败返回负数
  */
 static Error *
-pool_init(_i siz){
+zj_pool_init(_i siz){
     pthread_mutexattr_t zMutexAttr;
 
     /*
@@ -98,32 +95,32 @@ pool_init(_i siz){
      * 防止 fork 之后，在子进程中重建线程池时，形成死锁
      * 锁属性设置为 PTHREAD_MUTEX_NORMAL：不允许同一线程重复取锁
      */
-    pthread_mutex_destroy(&stack_header_lock);
+    pthread_mutex_destroy(&zj_stack_header_lock);
 
     pthread_mutexattr_init(&zMutexAttr);
     pthread_mutexattr_settype(&zMutexAttr, PTHREAD_MUTEX_NORMAL);
 
-    pthread_mutex_init(&stack_header_lock, &zMutexAttr);
+    pthread_mutex_init(&zj_stack_header_lock, &zMutexAttr);
 
     pthread_mutexattr_destroy(&zMutexAttr);
 
     /* 允许同时处于空闲状态的线程数量，即常备线程数量 */
-    pool_siz = siz;
+    zj_pool_siz = siz;
 
     /*
      * 必须动态初始化为 -1
      * 否则子进程继承父进程的栈索引，将带来异常
      */
-    stack_header = -1;
+    zj_stack_header = -1;
 
     /* 线程池栈结构空间 */
-    if(nil == (pool_stack = malloc(sizeof(void *) * pool_siz))){
+    if(nil == (zj_pool_stack = malloc(sizeof(void *) * zj_pool_siz))){
         return __err_new(errno, strerror(errno), nil);
     }
 
     _i i = 0;
-    while(i < pool_siz){
-        if (0 != pthread_create(&tid, nil, meta_fn, nil)) {
+    while(i < zj_pool_siz){
+        if (0 != pthread_create(&zj_tid, nil, zj_meta_fn, nil)) {
             return __err_new(errno, strerror(errno), nil);
         }
         ++i;
@@ -138,23 +135,23 @@ pool_init(_i siz){
  * 空闲线程过多时，会自动缩容
  */
 static void
-task_new(void * (* fn) (void *), void *fn_param){
-    pthread_mutex_lock(&stack_header_lock);
+zj_task_new(void * (* fn) (void *), void *fn_param){
+    pthread_mutex_lock(&zj_stack_header_lock);
 
-    while(0 > stack_header){
-        pthread_mutex_unlock(&stack_header_lock);
-        pthread_create(&tid, nil, meta_fn, nil);
-        pthread_mutex_lock(&stack_header_lock);
+    while(0 > zj_stack_header){
+        pthread_mutex_unlock(&zj_stack_header_lock);
+        pthread_create(&zj_tid, nil, zj_meta_fn, nil);
+        pthread_mutex_lock(&zj_stack_header_lock);
     }
 
-    pthread_mutex_lock(&pool_stack[stack_header]->cond_lock);
+    pthread_mutex_lock(&zj_pool_stack[zj_stack_header]->cond_lock);
 
-    pool_stack[stack_header]->fn = fn;
-    pool_stack[stack_header]->p_param = fn_param;
+    zj_pool_stack[zj_stack_header]->fn = fn;
+    zj_pool_stack[zj_stack_header]->p_param = fn_param;
 
-    pthread_mutex_unlock(&pool_stack[stack_header]->cond_lock);
-    pthread_cond_signal(&(pool_stack[stack_header]->cond_var));
+    pthread_mutex_unlock(&zj_pool_stack[zj_stack_header]->cond_lock);
+    pthread_cond_signal(&(zj_pool_stack[zj_stack_header]->cond_var));
 
-    stack_header--;
-    pthread_mutex_unlock(&stack_header_lock);
+    zj_stack_header--;
+    pthread_mutex_unlock(&zj_stack_header_lock);
 }

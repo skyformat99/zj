@@ -10,18 +10,18 @@
 #define __ssherr_new(__hdr) __err_new(ssh_get_error_code(__hdr), ssh_get_error(__hdr), nil)
 
 static Error *
-exec_once(char *cmd, _i *exit_status, char **cmd_info, size_t *cmd_info_siz, char *host, _i port, char *username, time_t conn_timeout_secs);
+zj_exec_once(char *cmd, _i *exit_status, char **cmd_info, size_t *cmd_info_siz, char *host, _i port, char *username, time_t conn_timeout_secs);
 
 static Error *
-exec_once_default(char *cmd, char *host, _i port, char *username);
+zj_exec_once_default(char *cmd, char *host, _i port, char *username);
 
 struct zj_ssh zjssh = {
-	.exec = exec_once,
-	.exec_default = exec_once_default,
+	.exec = zj_exec_once,
+	.exec_default = zj_exec_once_default,
 };
 
 __init static void
-multi_threads_env_init(void) {
+zj_multi_threads_env_init(void) {
     //link with -lssh_threads
     //must be called before ssh_init()
     //always return SSH_OK, need not check it's ret
@@ -34,7 +34,7 @@ multi_threads_env_init(void) {
 }
 
 static void
-session_drop(ssh_session *session){
+zj_session_drop(ssh_session *session){
     if(nil == *session){
         return;
     }
@@ -48,7 +48,7 @@ session_drop(ssh_session *session){
 }
 
 static void
-chan_drop(ssh_channel *chan){
+zj_chan_drop(ssh_channel *chan){
     if(nil == *chan){
         return;
     }
@@ -70,9 +70,9 @@ chan_drop(ssh_channel *chan){
 //@param cmd_info[out]: the stdout and stderr output of `cmd`
 //@param cmd_info_siz[out]: 1 + strlen(cmd_info)
 static Error *
-exec_once(char *cmd, _i *exit_status, char **cmd_info, size_t *cmd_info_siz,
+zj_exec_once(char *cmd, _i *exit_status, char **cmd_info, size_t *cmd_info_siz,
         char *host, _i port, char *username, time_t conn_timeout_secs) {
-    __drop(session_drop) ssh_session session = ssh_new();
+    __drop(zj_session_drop) ssh_session session = ssh_new();
     if(nil == session){
         return __err_new(-1, "create ssh_session failed", nil);
     }
@@ -106,7 +106,7 @@ exec_once(char *cmd, _i *exit_status, char **cmd_info, size_t *cmd_info_siz,
         return __ssherr_new(session);
     }
 
-    __drop(chan_drop) ssh_channel chan = ssh_channel_new(session);
+    __drop(zj_chan_drop) ssh_channel chan = ssh_channel_new(session);
     if(nil == chan){
         return __ssherr_new(session);
     }
@@ -155,10 +155,10 @@ exec_once(char *cmd, _i *exit_status, char **cmd_info, size_t *cmd_info_siz,
     return nil;
 }
 
-//simple wrapper of exec_once()
+//simple wrapper of zj_exec_once()
 static Error *
-exec_once_default(char *cmd, char *host, _i port, char *username) {
-    return exec_once(cmd, nil, nil, nil, host, port, username, 10);
+zj_exec_once_default(char *cmd, char *host, _i port, char *username) {
+    return zj_exec_once(cmd, nil, nil, nil, host, port, username, 10);
 }
 
 #ifdef _ZJ_UNIT_TEST
@@ -172,7 +172,7 @@ pthread_mutex_t mlock = PTHREAD_MUTEX_INITIALIZER;
 static void *
 thread_safe_checker(void *cnt){
     //async return, unless we waiting exit_status...
-    Error *e = exec_once("sleep 20", nil, nil, nil, "localhost", 22, _ZJ_UNIT_TEST_USER, 10);
+    Error *e = zjssh.exec("sleep 20", nil, nil, nil, "localhost", 22, _ZJ_UNIT_TEST_USER, 10);
     pthread_mutex_lock(&mlock);
     if(nil != e){
         __display_and_clean(e);
@@ -218,7 +218,7 @@ Main({
         });
 
         Convey("no output", {
-            e = exec_once("ls", &exit_status, nil, &recv_siz, "localhost", 22, _ZJ_UNIT_TEST_USER, 3);
+            e = zjssh.exec("ls", &exit_status, nil, &recv_siz, "localhost", 22, _ZJ_UNIT_TEST_USER, 3);
             if(nil != e) {
                 __display_and_clean(e);
             }
@@ -230,7 +230,7 @@ Main({
         });
 
         Convey("no output, must fail", {
-            e = exec_once("ls /root/_", &exit_status, &recv_buf, nil, "localhost", 22, _ZJ_UNIT_TEST_USER, 3);
+            e = zjssh.exec("ls /root/_", &exit_status, &recv_buf, nil, "localhost", 22, _ZJ_UNIT_TEST_USER, 3);
             if(nil != e) {
                 __display_and_clean(e);
             }
@@ -242,7 +242,7 @@ Main({
         });
 
         Convey("have output", {
-            e = exec_once("ls", &exit_status, &recv_buf, &recv_siz, "localhost", 22, _ZJ_UNIT_TEST_USER, 3);
+            e = zjssh.exec("ls", &exit_status, &recv_buf, &recv_siz, "localhost", 22, _ZJ_UNIT_TEST_USER, 3);
             if(nil != e) {
                 __display_and_clean(e);
             }
@@ -256,7 +256,7 @@ Main({
         });
 
         Convey("have output, must fail", {
-            e = exec_once("ls /root/_", &exit_status, &recv_buf, &recv_siz, "localhost", 22, _ZJ_UNIT_TEST_USER, 3);
+            e = zjssh.exec("ls /root/_", &exit_status, &recv_buf, &recv_siz, "localhost", 22, _ZJ_UNIT_TEST_USER, 3);
             if(nil != e) {
                 __display_and_clean(e);
             }
