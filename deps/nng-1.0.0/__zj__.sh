@@ -16,7 +16,7 @@ fi
 
 cmake -G "Unix Makefiles" ..\
     -DCMAKE_INSTALL_PREFIX=$path\
-    -DBUILD_SHARED_LIBS=ON\
+    -DBUILD_SHARED_LIBS=OFF\
     -DNNG_TRANSPORT_INPROC=OFF\
     -DNNG_TESTS=OFF\
     -DNNG_TOOLS=OFF\

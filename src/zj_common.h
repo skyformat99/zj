@@ -63,13 +63,19 @@ typedef struct Error {
 #define __display_errchain(__e) do{\
     time_t ts = time(NULL);\
     struct tm *now = localtime(&ts);\
-    fprintf(stderr, "\n[ %d-%d-%d %d:%d:%d ]\n\x1b[31;01m** ERROR **\x1b[00m\n",\
+    fprintf(stderr, "\n[ %d-%d-%d %d:%d:%d ]\n\x1b[31;01m** ERROR **\x1b[00m\n"\
+            "   ├── file: %s\n"\
+            "   ├── line: %d\n"\
+            "   └── func: %s\n",\
             now->tm_year + 1900,\
             now->tm_mon + 1,  /* Month (0-11) */\
             now->tm_mday,\
             now->tm_hour,\
             now->tm_min,\
-            now->tm_sec);\
+            now->tm_sec,\
+			__FILE__,\
+			__LINE__,\
+			__func__);\
 \
     Error *err = __e;\
     while(nil != err){\
@@ -78,12 +84,12 @@ typedef struct Error {
         }\
 \
         fprintf(stderr,\
-                "\x1b[01m===> (%d) \x1b[00m%s\n"\
+                "\x1b[01m   caused by: \x1b[00m%s (error code: %d)\n"\
                 "   ├── file: %s\n"\
                 "   ├── line: %d\n"\
                 "   └── func: %s\n",\
-                err->code,\
                 err->desc,\
+                err->code,\
                 err->file,\
                 err->line,\
                 err->func);\
@@ -99,6 +105,11 @@ typedef struct Error {
         __e = __e->cause;\
         free(err);\
     };\
+}while(0)
+
+#define __display_and_clean(__e) do{\
+	__display_errchain(__e);\
+	__clean_errchain(__e);\
 }while(0)
 
 #define __info(__msg) do{\
