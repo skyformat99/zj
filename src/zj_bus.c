@@ -125,13 +125,14 @@ trd_worker(void *info){
 	    exit(1);
 	}
 
-	sleep(4);
-
+	pthread_mutex_lock(&mlock);
+	usleep(100 * 1000);
     e = send(sock, "", sizeof(""));
     if(nil != e){
-        __atomic_log(e);
+        __display_and_clean(e);
         exit(1);
     }
+	pthread_mutex_unlock(&mlock);
 
     nng_close(sock);
 	free(bi);
