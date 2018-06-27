@@ -3,30 +3,50 @@
 
 #include "zj_bus.h"
 
-static Error * zj_new(const char *self_id, nng_socket *sock); 
-static Error * zj_dial(const char *remote_id, nng_socket sock);
+static Error * zj_new(nng_socket *sock);
+static Error * zj_listen(const char *self_id, nng_socket *sock);
+static Error * zj_dial(nng_socket sock, const char *remote_id);
+
 static Error * zj_send(nng_socket sock, void *data, size_t data_len);
 static Error * zj_recv(nng_socket sock, void **data, size_t *data_len);
 
 struct zj_bus zjbus = {
     .new = zj_new,
+    .listen = zj_listen,
     .dial = zj_dial,
     .send = zj_send,
     .recv = zj_recv,
 };
 
-//@param self_id[in]: handler name
 //@param sock[out]: created handler
 static Error *
-zj_new(const char *self_id, nng_socket *sock){
+zj_new(nng_socket *sock){
     _i e = nng_bus0_open(sock);
-    if (0 != e) {
+    if (0 == e) {
+        return nil;
+    } else {
         return __err_new(e, nng_strerror(e), nil);
     }
+}
 
-    e = nng_listen(*sock, self_id, NULL, 0);
-    if (0 != e) {
-        return __err_new(e, nng_strerror(e), nil);
+//@param self_id[in]: handler name
+//@param sock[in]:
+static Error *
+zj_listen(const char *self_id, nng_socket *sock){
+    _i eno;
+    nng_listener l;
+
+    eno = nng_listener_create(&l, *sock, self_id);
+    if (0 != eno) {
+        return __err_new(eno, nng_strerror(eno), nil);
+    }
+
+    nng_listener_setopt_int(l, NNG_OPT_RECVBUF, 8192);
+    //nng_listener_setopt_int(l, NNG_OPT_SENDBUF, 8192);
+
+    eno = nng_listener_start(l, 0);
+    if (0 != eno) {
+        return __err_new(eno, nng_strerror(eno), nil);
     }
 
     return nil;
@@ -35,13 +55,13 @@ zj_new(const char *self_id, nng_socket *sock){
 //@param id[in]: handler name
 //@param sock[in]:
 static Error *
-zj_dial(const char *remote_id, nng_socket sock){
+zj_dial(nng_socket sock, const char *remote_id){
     _i e = nng_dial(sock, remote_id, NULL, 0);
-    if (0 != e) {
+    if (0 == e) {
+        return nil;
+    } else {
         return __err_new(e, nng_strerror(e), nil);
     }
-
-    return nil;
 }
 
 //@param sock[in]: handler
@@ -114,7 +134,7 @@ void *
 thread_worker(void *info){
     bus_info *bi = (bus_info *)info;
     nng_socket sock;
-    Error *e = zjbus.new(bi->self_url, &sock);
+    Error *e = zjbus.new(&sock);
     if(nil != e){
         __atomic_log(e);
         exit(1);
@@ -126,7 +146,13 @@ thread_worker(void *info){
     }
     pthread_mutex_unlock(&mlock);
 
-    e = zjbus.dial(bi->remote_url, sock);
+    e = zjbus.dial(sock, bi->remote_url);
+    if(nil != e){
+        __atomic_log(e);
+        exit(1);
+    }
+
+    e = zjbus.listen(bi->self_url, &sock);
     if(nil != e){
         __atomic_log(e);
         exit(1);
@@ -170,7 +196,13 @@ Main({
             }
 
             nng_socket sock;
-            e = zjbus.new(leader_url, &sock);
+            e = zjbus.new(&sock);
+            if(nil != e){
+                __atomic_log(e);
+                exit(1);
+            }
+
+            e = zjbus.listen(leader_url, &sock);
             if(nil != e){
                 __atomic_log(e);
                 exit(1);
@@ -208,7 +240,7 @@ Main({
 
             i = 0;
             while(i < __node_total){
-                e = zjbus.dial(slave_url[i], sock);
+                e = zjbus.dial(sock, slave_url[i]);
                 if(nil != e){
                     __atomic_log(e);
                     exit(1);

@@ -7,10 +7,11 @@
 #include "zj_common.h"
 
 struct zj_bus{
-	Error * (*new) (const char *, nng_socket *) __prm_nonnull __mustuse;
-	Error * (*dial) (const char *, nng_socket) __prm_nonnull __mustuse;
-	Error * (*send) (nng_socket, void *, size_t) __prm_nonnull __mustuse;
-	Error * (*recv) (nng_socket, void **, size_t *) __mustuse;
+    Error * (*new) (nng_socket *sock) __mustuse;
+    Error * (*listen) (const char *self_id, nng_socket *sock) __prm_nonnull __mustuse;
+    Error * (*dial) (nng_socket sock, const char *remote_id) __prm_nonnull __mustuse;
+    Error * (*send) (nng_socket, void *, size_t) __prm_nonnull __mustuse;
+    Error * (*recv) (nng_socket, void **, size_t *) __mustuse;
 };
 
 struct zj_bus zjbus;
