@@ -22,8 +22,8 @@ cmake -G "Unix Makefiles" ..\
     -DNNG_TOOLS=OFF\
     -DNNG_ENABLE_TLS=OFF\
     -DNNG_TRANSPORT_ZEROTIER=OFF\
-    -DNNG_ENABLE_HTTP=ON\
     -DNNG_TRANSPORT_WS=OFF\
+    -DNNG_ENABLE_HTTP=ON\
     -DCMAKE_BUILD_TYPE=Release
 
 if [ 0 -ne $? ]; then

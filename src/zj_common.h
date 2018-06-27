@@ -14,7 +14,8 @@
 
 #define __init __attribute__ ((constructor(1000)))
 #define __init_with_pri(idx) __attribute__ ((constructor(idx)))
-#define __clean(idx) __attribute__ ((destructor(idx)))
+#define __clean __attribute__ ((destructor(1000)))
+#define __clean_with_pri(idx) __attribute__ ((destructor(idx)))
 
 #define __drop(cb) __attribute__ ((cleanup(cb))) // release object when it is out of scope
 
