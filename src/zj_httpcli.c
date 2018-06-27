@@ -35,19 +35,19 @@ typedef struct{
     nng_aio *        aio;
     nng_http_client *cli;
     nng_http_conn *  conn;
-}zj_http_cliproc;
+}zj_http_cli_flow;
 
 static void
-zj_http_cliproc_clean(zj_http_cliproc *cl){
-    if(nil == cl){ return; }
+zj_http_cli_flow_clean(zj_http_cli_flow *c){
+    if(nil == c){ return; }
 
-    if (nil != cl->url) { nng_url_free(cl->url); }
-    if (nil != cl->req) { nng_http_req_free(cl->req); }
-    if (nil != cl->res) { nng_http_res_free(cl->res); }
+    if(nil != c->url){ nng_url_free(c->url); }
+    if(nil != c->req){ nng_http_req_free(c->req); }
+    if(nil != c->res){ nng_http_res_free(c->res); }
 
-    if (nil != cl->aio) { nng_aio_free(cl->aio); }
-    if (nil != cl->conn) { nng_http_conn_close(cl->conn); }
-    if (nil != cl->cli) { nng_http_client_free(cl->cli); }
+    if(nil != c->aio){ nng_aio_free(c->aio); }
+    if(nil != c->conn){ nng_http_conn_close(c->conn); }
+    if(nil != c->cli){ nng_http_client_free(c->cli); }
 }
 
 //@param urlstr[in]:
@@ -58,7 +58,7 @@ zj_http_cliproc_clean(zj_http_cliproc *cl){
 static Error *
 zj_http_req(const char *urlstr, const char *method,
         void **body, size_t *bsiz, _i *status_code){
-    __drop(zj_http_cliproc_clean) zj_http_cliproc cl = { nil, nil, nil, nil, nil, nil };
+    __drop(zj_http_cli_flow_clean) zj_http_cli_flow cl = { nil, nil, nil, nil, nil, nil };
     *status_code = -1;
     _i rv;
 
