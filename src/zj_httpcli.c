@@ -147,7 +147,7 @@ Main({
     Test("nng http client tests", {
         Error *e = nil;
 
-        const char *urlstr = "http://[::1]:30000/test?name=zjms";
+        const char *urlstr = "http://localhost:30000/test?name=zjms";
         const char *urlstr_bad = "http://www.163.com?~";
         const char *body = "POST";
         size_t bsiz = strlen(body);
@@ -155,7 +155,7 @@ Main({
 
         Convey("http GET test", {
             Convey("200 test", {
-                e = zjhttpcli.get(urlstr, &body, &bsiz, &status_code);
+                e = zjhttpcli.get(urlstr, (void **)&body, &bsiz, &status_code);
                 if(nil != e){
                     __display_and_clean(e);
                 }
@@ -166,7 +166,7 @@ Main({
             });
 
             Convey("bad req test", {
-                e = zjhttpcli.get(urlstr_bad, &body, &bsiz, &status_code);
+                e = zjhttpcli.get(urlstr_bad, (void **)&body, &bsiz, &status_code);
                 if(nil != e){
                     __display_and_clean(e);
                 }
@@ -178,7 +178,7 @@ Main({
 
         Convey("http POST test", {
             Convey("200 test", {
-                e = zjhttpcli.post(urlstr, &body, &bsiz, &status_code);
+                e = zjhttpcli.post(urlstr, (void **)&body, &bsiz, &status_code);
                 if(nil != e){
                     __display_and_clean(e);
                 }
@@ -189,7 +189,7 @@ Main({
             });
 
             Convey("bad req test", {
-                e = zjhttpcli.post(urlstr_bad, &body, &bsiz, &status_code);
+                e = zjhttpcli.post(urlstr_bad, (void **)&body, &bsiz, &status_code);
                 if(nil != e){
                     __display_and_clean(e);
                 }

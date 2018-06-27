@@ -1,5 +1,9 @@
 #!/usr/bin/env sh
 
+(go run http_server.go) &
+
+sleep 2
+
 name=zj_httpcli
 path=/tmp/__zj__
 

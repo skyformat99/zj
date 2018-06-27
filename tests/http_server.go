@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"time"
 	"io/ioutil"
 	"net/http"
 )
@@ -18,6 +20,11 @@ func Start() error {
 }
 
 func main() {
+	go func(){
+		time.Sleep(10 * time.Second)
+		os.Exit(0)
+	}()
+
 	Start()
 }
 
