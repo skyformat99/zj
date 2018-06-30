@@ -15,9 +15,9 @@ struct nng_sha1{
     void (*init) (nng_sha1_ctx *);
     void (*update) (nng_sha1_ctx *, const void *, size_t);
     void (*final) (nng_sha1_ctx *, uint8_t[20]);
-    
+
     void (*once) (const void *, size_t, uint8_t[20]);
-    
+
     void (*lower_case) (void *, size_t, char[41]);
     void (*upper_case) (void *, size_t, char[41]);
 };

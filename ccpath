@@ -10,4 +10,7 @@
 -I ${HOME}/zjms/src/MQ
 -I ${HOME}/zjms/src/http
 -I ${HOME}/zjms/src/ssh
+-I ${HOME}/zjms/src/sha1
+-I ${HOME}/zjms/src/threadpool
+-I ${HOME}/zjms/src/utils
 -I ${HOME}/zjms/src/raft
