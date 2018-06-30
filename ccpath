@@ -1,0 +1,13 @@
+-L ${HOME}/zjms/deps/libssh-20180628/__z__/lib
+-L ${HOME}/zjms/deps/libgit2-0.27.2/__z__/lib
+-L ${HOME}/zjms/deps/nng-1.0.0/__z__/lib
+
+-I ${HOME}/zjms/deps/libssh-20180628/__z__/include
+-I ${HOME}/zjms/deps/libgit2-0.27.2/__z__/include
+-I ${HOME}/zjms/deps/nng-1.0.0/__z__/include
+
+-I ${HOME}/zjms/src
+-I ${HOME}/zjms/src/MQ
+-I ${HOME}/zjms/src/http
+-I ${HOME}/zjms/src/ssh
+-I ${HOME}/zjms/src/raft
