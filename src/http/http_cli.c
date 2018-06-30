@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 
 #include "nng/nng.h"
 #include "nng/supplemental/http/http.h"
@@ -11,6 +12,8 @@
 #ifdef OS_FREEBSD
 #include <limits.h>
 #endif
+
+#define __http_req_max_body_siz 1 * 1024 * 1024 //1MB
 
 __prm_nonnull static error_t *
 http_get(const char *urlstr, source_t *s, _i *status_code);
@@ -59,7 +62,6 @@ static error_t *
 http_req(const char *urlstr, const char *method, source_t *s, _i *status_code){
     __drop(http_cli_flow_clean)
     struct http_cli_flow cl = { nil, nil, nil, nil, nil, nil };
-    const char *ptr = nil;
     _i rv = 0;
 
     s->drop = utils.non_drop;
@@ -86,6 +88,10 @@ http_req(const char *urlstr, const char *method, source_t *s, _i *status_code){
     cl.conn = nng_aio_get_output(cl.aio, 0);
 
     if(nil != s->data){
+        if(__http_req_max_body_siz < s->dsiz){
+            return __err_new(-1, "reqbody data size too big", nil);
+        }
+
         if(0 != (rv = nng_http_req_copy_data(cl.req, s->data, s->dsiz))){
             return __err_new(rv, nng_strerror(rv), nil);
         }
@@ -108,13 +114,16 @@ http_req(const char *urlstr, const char *method, source_t *s, _i *status_code){
     s->data = nil;
     s->dsiz = 0;
 
-    if(nil != (ptr = nng_http_res_get_header(cl.res, "Content-Length"))){
+    const char *ptr = nng_http_res_get_header(cl.res, "Content-Length");
+    if(nil != ptr){
         s->dsiz = strtol(ptr, nil, 10);
-
         if (0 < s->dsiz) {
             nng_iov iov;
-            s->data = nng_alloc(s->dsiz);
-            s->drop = utils.nng_drop;
+            if(nil == (s->data = nng_alloc(s->dsiz))){
+                return __err_new(-1, ptr, nil);
+            } else {
+                s->drop = utils.nng_drop;
+            }
 
             iov.iov_buf = s->data;
             iov.iov_len = s->dsiz;
@@ -125,6 +134,7 @@ http_req(const char *urlstr, const char *method, source_t *s, _i *status_code){
                 nng_free(s->data, s->dsiz);
                 s->data = nil;
                 s->dsiz = 0;
+                s->drop = utils.non_drop;
                 return __err_new(rv, nng_strerror(rv), nil);
             }
         }

@@ -25,7 +25,6 @@ main(void){
     if(nil != e){
         __display_and_fatal(e);
     }
-    printf("contents: %s, status: %d\n", (char *)s.data, status_code);
     s.drop(&s);
     SoN(200, status_code);
 
@@ -34,7 +33,6 @@ main(void){
     if(nil != e){
         __display_and_fatal(e);
     }
-    printf("contents: %s, status: %d\n", (char *)s.data, status_code);
     s.drop(&s);
     SoN(200, status_code);
 }

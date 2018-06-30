@@ -119,13 +119,10 @@ struct error_t{
 // For Unit Tests
 #define So(__v1, __v2) do{\
     if((__v1) == (__v2)){\
-        printf("\x1b[32;01m"\
-                "Pass < %s == %s >\x1b[00m\n"\
-                "\tFile: %s\n"\
-                "\tLine: %d\n",\
+        printf("\x1b[32;01mPass < %s == %s >\x1b[00m\tFile: %s\tLine: %d\n",\
                 #__v1, #__v2, __FILE__, __LINE__);\
     } else {\
-        printf("\x1b[33;01mAssert Failed < %s == %s >: %lld != %lld\x1b[00m\n"\
+        printf("\x1b[33;01mFailed < %s == %s >: %lld != %lld\x1b[00m\n"\
                 "\tFile: %s\n"\
                 "\tLine: %d\n",\
                 #__v1, #__v2, (_lli)(__v1), (_lli)(__v2), __FILE__, __LINE__);\
@@ -135,16 +132,13 @@ struct error_t{
 
 #define SoN(__v1, __v2) do{\
     if((__v1) == (__v2)){\
-        printf("\x1b[33;01mAssert Failed < %s != %s >: %lld != %lld\x1b[00m\n"\
+        printf("\x1b[33;01mFailed < %s != %s >: %lld != %lld\x1b[00m\n"\
                 "\tFile: %s\n"\
                 "\tLine: %d\n",\
                 #__v1, #__v2, (_lli)(__v1), (_lli)(__v2), __FILE__, __LINE__);\
         exit(1);\
     } else {\
-        printf("\x1b[32;01m"\
-                "Pass < %s == %s >\x1b[00m\n"\
-                "\tFile: %s\n"\
-                "\tLine: %d\n",\
+        printf("\x1b[32;01mPass < %s != %s >\x1b[00m\tFile: %s\tLine: %d\n",\
                 #__v1, #__v2, __FILE__, __LINE__);\
     }\
 }while(0)
