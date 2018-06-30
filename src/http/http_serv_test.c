@@ -97,10 +97,8 @@ thread_worker(void *info __unuse){
     if(nil != (e = httpcli.post("http://localhost:9000/body_add_one", &s, &status))){
         __display_and_clean(e);
     }
-    So(200, status);
-    So(0, strcmp("101", s.data));
-    So(sizeof("101") - 1, s.dsiz);
-    So(utils.nng_drop, s.drop);
+    SoN(200, status);
+    So(utils.non_drop, s.drop);
     s.drop(&s);
 
     __env__
