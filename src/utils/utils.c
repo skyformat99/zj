@@ -107,7 +107,7 @@ static _i log_wr_cnt = 0;
 __init static void
 logfd_init(void){
 #ifdef Z_RELEASE
-    logfd = open(logvec[0], O_WRONLY|O_CREAT, 0600);
+    logfd = open(logvec[0], O_WRONLY|O_CREAT|O_APPEND, 0600);
     if(-1 == logfd){
         __fatal("can NOT open logfile");
     }
