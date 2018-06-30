@@ -9,7 +9,7 @@ _i n_fini;
 
 void *
 add_one(void *_ __unuse){
-    __info("_");
+    //__info("_");
 
     pthread_mutex_lock(&mlock);
     ++n_fini;

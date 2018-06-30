@@ -95,7 +95,7 @@ thread_worker(void *info __unuse){
     __env__
     s.dsiz = 1000000000;
     if(nil != (e = httpcli.post("http://localhost:9000/body_add_one", &s, &status))){
-        __display_and_fatal(e);
+        __display_and_clean(e);
     }
     So(200, status);
     So(0, strcmp("101", s.data));

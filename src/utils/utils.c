@@ -43,7 +43,11 @@ struct utils utils = {
 
 inline static _i
 ncpus(void){
+#ifdef Z_OS_LINUX
     return sysconf(_SC_NPROCESSORS_ONLN);
+#else
+    return 8;
+#endif
 }
 
 inline static void
