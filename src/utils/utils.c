@@ -106,7 +106,6 @@ static _i log_wr_cnt = 0;
 
 __init static void
 logfd_init(void){
-#define Z_RELEASE
 #ifdef Z_RELEASE
     logfd = open(logvec[0], O_WRONLY|O_CREAT, 0600);
     if(-1 == logfd){
@@ -217,4 +216,12 @@ display_errchain(error_t *e, const char * const file, const _i line, const char 
         e = e->cause;
     };
     pthread_mutex_unlock(&loglock);
+}
+
+/**
+ * exit clean
+ */
+__final void
+sys_clean(){
+    close(logfd);
 }
