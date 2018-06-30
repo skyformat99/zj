@@ -1,6 +1,7 @@
 #include "utils.h"
 
 #include <unistd.h>
+#include <fcntl.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,8 +27,6 @@ static void sys_drop(source_t *s);
 static void non_drop(source_t *s);
 static void *must_alloc(size_t siz, const char * const file, const _i line, const char *const func);
 
-static pthread_mutex_t loglock = PTHREAD_MUTEX_INITIALIZER;
-
 struct utils utils = {
     .ncpus = ncpus,
     .info = info,
@@ -42,102 +41,17 @@ struct utils utils = {
     .alloc = must_alloc,
 };
 
-static _i
+inline static _i
 ncpus(void){
     return sysconf(_SC_NPROCESSORS_ONLN);
 }
 
-static void
-print_time(void){
-    time_t ts = time(NULL);
-    struct tm *now = localtime(&ts);
-    printf("\n[ %d-%d-%d %d:%d:%d ]\n",
-            now->tm_year + 1900,
-            now->tm_mon + 1,  /* Month (0-11) */\
-            now->tm_mday,
-            now->tm_hour,
-            now->tm_min,
-            now->tm_sec);
-}
-
-static void
-info(const char *msg, const char * const file, const _i line, const char *const func){
-    pthread_mutex_lock(&loglock);
-    print_time();
-    printf("\x1b[01mINFO:\x1b[00m %s\n"
-            "   ├── file: %s\n"
-            "   ├── line: %d\n"
-            "   └── func: %s\n",
-            msg,
-            file,
-            line,
-            func);
-    pthread_mutex_unlock(&loglock);
-}
-
-static void
-fatal(const char *msg, const char * const file, const _i line, const char *const func){
-    pthread_mutex_lock(&loglock);
-    print_time();
-    printf("\x1b[31;01mFATAL:\x1b[00m %s\n"
-            "   ├── file: %s\n"
-            "   ├── line: %d\n"
-            "   └── func: %s\n",
-            msg,
-            file,
-            line,
-            func);
-    pthread_mutex_unlock(&loglock);
-
-    exit(1);
-}
-
-static void
-display_errchain(error_t *e, const char * const file, const _i line, const char *const func){
-    time_t ts = time(NULL);
-    struct tm *now = localtime(&ts);
-
-    pthread_mutex_lock(&loglock);
-    printf("\n[ %d-%d-%d %d:%d:%d ]\n\x1b[31;01m** ERROR **\x1b[00m\n"
-            "   ├── file: %s\n"
-            "   ├── line: %d\n"
-            "   └── func: %s\n",
-            now->tm_year + 1900,
-            now->tm_mon + 1,  /* Month (0-11) */
-            now->tm_mday,
-            now->tm_hour,
-            now->tm_min,
-            now->tm_sec,
-            file,
-            line,
-            func);
-
-    while(nil != e){
-        if(nil == e->desc){
-            e->desc = "";
-        }
-
-        printf("\x1b[01m   caused by: \x1b[00m%s (error code: %d)\n"
-                "   ├── file: %s\n"
-                "   ├── line: %d\n"
-                "   └── func: %s\n",
-                e->desc,
-                e->code,
-                e->file,
-                e->line,
-                e->func);
-
-        e = e->cause;
-    };
-    pthread_mutex_unlock(&loglock);
-}
-
-static void
+inline static void
 msleep(_i ms){
     nng_msleep(ms);
 }
 
-static _ui
+inline static _ui
 urand(void){
     return nng_random();
 }
@@ -168,4 +82,139 @@ must_alloc(size_t siz, const char * const file, const _i line, const char *const
         fatal("the fucking world is over!!!!", file, line, func);
     };
     return p;
+}
+
+/**
+ * LOG
+ */
+static pthread_mutex_t loglock = PTHREAD_MUTEX_INITIALIZER;
+static const char *logvec[10] = {
+    "/tmp/________log-0",
+    "/tmp/________log-1",
+    "/tmp/________log-2",
+    "/tmp/________log-3",
+    "/tmp/________log-4",
+    "/tmp/________log-5",
+    "/tmp/________log-6",
+    "/tmp/________log-7",
+    "/tmp/________log-8",
+    "/tmp/________log-9",
+};
+
+static _i logfd = -1;
+static _i log_wr_cnt = 0;
+
+__init static void
+logfd_init(void){
+#define Z_RELEASE
+#ifdef Z_RELEASE
+    logfd = open(logvec[0], O_WRONLY|O_CREAT, 0600);
+    if(-1 == logfd){
+        __fatal("can NOT open logfile");
+    }
+#else
+    logfd = STDOUT_FILENO;
+#endif
+}
+
+//rotate per 100 * 10000 logs
+void
+logrotate(void){
+    if(100 * 10000 < log_wr_cnt){
+        close(logfd);
+        unlink(logvec[9]);
+        _i i = 0;
+        for(; i < 9; ++i){
+            rename(logvec[i], logvec[i + 1]);
+        }
+
+        logfd_init();
+        log_wr_cnt = 0;
+    }
+    ++log_wr_cnt;
+}
+
+static void
+print_time(void){
+    time_t ts = time(NULL);
+    struct tm *now = localtime(&ts);
+    dprintf(logfd, "\n[ %d-%d-%d %d:%d:%d ]\n",
+            now->tm_year + 1900,
+            now->tm_mon + 1,  /* Month (0-11) */\
+            now->tm_mday,
+            now->tm_hour,
+            now->tm_min,
+            now->tm_sec);
+}
+
+static void
+info(const char *msg, const char * const file, const _i line, const char *const func){
+    pthread_mutex_lock(&loglock); logrotate();
+    print_time();
+    dprintf(logfd, "\x1b[01mINFO:\x1b[00m %s\n"
+            "   ├── file: %s\n"
+            "   ├── line: %d\n"
+            "   └── func: %s\n",
+            msg,
+            file,
+            line,
+            func);
+    pthread_mutex_unlock(&loglock);
+}
+
+static void
+fatal(const char *msg, const char * const file, const _i line, const char *const func){
+    pthread_mutex_lock(&loglock); logrotate();
+    print_time();
+    dprintf(logfd, "\x1b[31;01mFATAL:\x1b[00m %s\n"
+            "   ├── file: %s\n"
+            "   ├── line: %d\n"
+            "   └── func: %s\n",
+            msg,
+            file,
+            line,
+            func);
+    pthread_mutex_unlock(&loglock);
+
+    exit(1);
+}
+
+static void
+display_errchain(error_t *e, const char * const file, const _i line, const char *const func){
+    time_t ts = time(NULL);
+    struct tm *now = localtime(&ts);
+
+    pthread_mutex_lock(&loglock); logrotate();
+    dprintf(logfd, "\n[ %d-%d-%d %d:%d:%d ]\n\x1b[31;01m** ERROR **\x1b[00m\n"
+            "   ├── file: %s\n"
+            "   ├── line: %d\n"
+            "   └── func: %s\n",
+            now->tm_year + 1900,
+            now->tm_mon + 1,  /* Month (0-11) */
+            now->tm_mday,
+            now->tm_hour,
+            now->tm_min,
+            now->tm_sec,
+            file,
+            line,
+            func);
+
+    while(nil != e){
+        if(nil == e->desc){
+            e->desc = "";
+        }
+
+        dprintf(logfd, "\x1b[01m   caused by: \x1b[00m%s (error code: %d)\n"
+                "   ├── file: %s\n"
+                "   ├── line: %d\n"
+                "   └── func: %s\n",
+                e->desc,
+                e->code,
+                e->file,
+                e->line,
+                e->func);
+
+        e = e->cause;
+    };
+    pthread_mutex_unlock(&loglock);
 }
