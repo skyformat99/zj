@@ -13,15 +13,15 @@
 #include "nng/nng.h"
 #include "nng/supplemental/util/platform.h"
 
-static _i ncpus(void);
+inline static _i ncpus(void);
 
 static void print_time(void);
 static void info(const char *msg, const char * const file, const _i line, const char *const func);
 static void fatal(const char *msg, const char * const file, const _i line, const char *const func);
 static void display_errchain(error_t *e, const char * const file, const _i line, const char *const func);
 
-static void msleep(_i ms);
-static _ui urand(void);
+inline static void msleep(_i ms);
+inline static _ui urand(void);
 static void nng_drop(source_t *s);
 static void sys_drop(source_t *s);
 static void non_drop(source_t *s);
@@ -123,8 +123,8 @@ logrotate(void){
     if(100 * 10000 < log_wr_cnt){
         close(logfd);
         unlink(logvec[9]);
-        _i i = 0;
-        for(; i < 9; ++i){
+        _i i = 8;
+        for(; i >= 0; --i){
             rename(logvec[i], logvec[i + 1]);
         }
 

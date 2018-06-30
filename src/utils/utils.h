@@ -113,7 +113,7 @@ struct error_t{
 }while(0)
 
 #define __info(__msg) do{\
-    utils.fatal(__msg, __FILE__, __LINE__, __func__);\
+    utils.info(__msg, __FILE__, __LINE__, __func__);\
 }while(0)
 
 // For Unit Tests
