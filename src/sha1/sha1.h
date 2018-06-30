@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <sys/types.h>
+#include "utils.h"
 
 typedef struct {
     uint32_t digest[5]; // resulting digest
@@ -18,10 +19,10 @@ struct nng_sha1{
 
     void (*once) (const void *, size_t, uint8_t[20]);
 
-    void (*lower_case) (void *, size_t, char[41]);
-    void (*upper_case) (void *, size_t, char[41]);
+    void (*gen) (void *, size_t, char[41]);
+    error_t *(*file) (char *, char res[41]);
 };
 
-struct nng_sha1 nngsha1;
+struct nng_sha1 sha1;
 
 #endif // Z_NNG_SHA1_H

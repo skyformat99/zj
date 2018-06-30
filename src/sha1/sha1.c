@@ -4,6 +4,9 @@
  */
 #include <stdio.h>
 #include <string.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <errno.h>
 
 #include "sha1.h"
 
@@ -14,17 +17,17 @@ static void nng_sha1_final(nng_sha1_ctx *, uint8_t[20]);
 static void nng_sha1(const void *, size_t, uint8_t[20]);
 
 static void sha1_lower_case(void *, size_t, char[41]);
-static void sha1_upper_case(void *, size_t, char[41]);
+static error_t * sha1_file_lower_case(char *filepath, char res[41]);
 
-struct nng_sha1 nngsha1 = {
+struct nng_sha1 sha1 = {
     .init = nng_sha1_init,
     .update = nng_sha1_update,
     .final = nng_sha1_final,
 
     .once = nng_sha1,
 
-    .lower_case = sha1_lower_case,
-    .upper_case = sha1_upper_case,
+    .gen = sha1_lower_case,
+    .file = sha1_file_lower_case,
 };
 
 // Define the circular shift macro
@@ -232,13 +235,33 @@ sha1_lower_case(void *src, size_t src_siz, char res[41]){
     }
 }
 
-static void
-sha1_upper_case(void *src, size_t src_siz, char res[41]){
+//@param filepath[in]:
+//upper_case_or_not[in]: 0 for lowercase
+//@param res[out]:
+static error_t *
+sha1_file_lower_case(char *filepath, char res[41]){
     uint8_t r[20];
-    nng_sha1(src, src_siz, r);
+    nng_sha1_ctx ctx;
 
-    src_siz = 0;
-    for(; src_siz < 20; ++src_siz){
-        sprintf(res + 2 * src_siz, "%02X", r[src_siz]);
+    char buf[8192];
+    size_t len;
+
+    _i fd, i;
+
+    if(0 > (fd = open(filepath, O_RDONLY))){
+        return __err_new(errno, strerror(errno), nil);
     }
+
+    nng_sha1_init(&ctx);
+    while(0 < (len = read(fd, buf, 8192))){
+        nng_sha1_update(&ctx, buf, len);
+    }
+
+    nng_sha1_final(&ctx, r);
+
+    for(i = 0; i < 20; ++i){
+        sprintf(res + 2 * i, "%02x", r[i]);
+    }
+
+    return nil;
 }
