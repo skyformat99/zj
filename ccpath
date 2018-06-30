@@ -1,16 +1,16 @@
--L ${HOME}/zjms/deps/libssh-20180628/__z__/lib
--L ${HOME}/zjms/deps/libgit2-0.27.2/__z__/lib
--L ${HOME}/zjms/deps/nng-1.0.0/__z__/lib
+-L ${HOME}/zj/deps/libssh-20180628/__z__/lib
+-L ${HOME}/zj/deps/libgit2-0.27.2/__z__/lib
+-L ${HOME}/zj/deps/nng-1.0.0/__z__/lib
 
--I ${HOME}/zjms/deps/libssh-20180628/__z__/include
--I ${HOME}/zjms/deps/libgit2-0.27.2/__z__/include
--I ${HOME}/zjms/deps/nng-1.0.0/__z__/include
+-I ${HOME}/zj/deps/libssh-20180628/__z__/include
+-I ${HOME}/zj/deps/libgit2-0.27.2/__z__/include
+-I ${HOME}/zj/deps/nng-1.0.0/__z__/include
 
--I ${HOME}/zjms/src
--I ${HOME}/zjms/src/MQ
--I ${HOME}/zjms/src/http
--I ${HOME}/zjms/src/ssh
--I ${HOME}/zjms/src/sha1
--I ${HOME}/zjms/src/threadpool
--I ${HOME}/zjms/src/utils
--I ${HOME}/zjms/src/raft
+-I ${HOME}/zj/src
+-I ${HOME}/zj/src/MQ
+-I ${HOME}/zj/src/http
+-I ${HOME}/zj/src/ssh
+-I ${HOME}/zj/src/sha1
+-I ${HOME}/zj/src/threadpool
+-I ${HOME}/zj/src/utils
+-I ${HOME}/zj/src/raft

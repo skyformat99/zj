@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-mark=`cat ${ZJMS_PATH}/mark`
+mark=`cat ${ZJ_PATH}/mark`
 name=`basename $0 | grep -o '^[^.]\+'`
 path=/tmp/${mark}
 
@@ -11,8 +11,8 @@ if [[ 0 -ne $? ]]; then
 fi
 
 # **** #
-eval cc -g ${name}.c `cat ${ZJMS_PATH}/ccpath` -o ${path}/${name}\
-    "`perl -ane 'print "$F[1]" if /^-L.*nng/' ${ZJMS_PATH}/ccpath | head -1`/libnng.a"\
+eval cc -g ${name}.c `cat ${ZJ_PATH}/ccpath` -o ${path}/${name}\
+    "`perl -ane 'print "$F[1]" if /^-L.*nng/' ${ZJ_PATH}/ccpath | head -1`/libnng.a"\
     -lpthread
 
 if [[ 0 -ne $? ]]; then

@@ -89,16 +89,16 @@ must_alloc(size_t siz, const char * const file, const _i line, const char *const
  */
 static pthread_mutex_t loglock = PTHREAD_MUTEX_INITIALIZER;
 static const char *logvec[10] = {
-    "/tmp/________log-0",
-    "/tmp/________log-1",
-    "/tmp/________log-2",
-    "/tmp/________log-3",
-    "/tmp/________log-4",
-    "/tmp/________log-5",
-    "/tmp/________log-6",
-    "/tmp/________log-7",
-    "/tmp/________log-8",
-    "/tmp/________log-9",
+    "/tmp/zj@log-0",
+    "/tmp/zj@log-1",
+    "/tmp/zj@log-2",
+    "/tmp/zj@log-3",
+    "/tmp/zj@log-4",
+    "/tmp/zj@log-5",
+    "/tmp/zj@log-6",
+    "/tmp/zj@log-7",
+    "/tmp/zj@log-8",
+    "/tmp/zj@log-9",
 };
 
 static _i logfd = -1;
