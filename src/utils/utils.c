@@ -1,9 +1,10 @@
 #include "utils.h"
 
-#include <unistd.h>
 #include <fcntl.h>
 #include <pthread.h>
+
 #include <stdio.h>
+#include <unistd.h>
 #include <stdlib.h>
 
 #ifdef OS_FREEBSD
@@ -139,7 +140,7 @@ logrotate(void){
 
 static void
 print_time(void){
-    time_t ts = time(NULL);
+    time_t ts = time(nil);
     struct tm *now = localtime(&ts);
     dprintf(logfd, "\n[ %d-%d-%d %d:%d:%d ]\n",
             now->tm_year + 1900,
@@ -184,7 +185,7 @@ fatal(const char *msg, const char * const file, const _i line, const char *const
 
 static void
 display_errchain(error_t *e, const char * const file, const _i line, const char *const func){
-    time_t ts = time(NULL);
+    time_t ts = time(nil);
     struct tm *now = localtime(&ts);
 
     pthread_mutex_lock(&loglock); logrotate();

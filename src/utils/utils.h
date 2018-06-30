@@ -143,9 +143,61 @@ struct error_t{
     }\
 }while(0)
 
-//Memory Management
+/**
+ * Memory Management
+ */
 #define __malloc(__siz) ({\
     utils.alloc(__siz, __FILE__, __LINE__, __func__);\
 })
 
+/**
+ * Bit Management
+ */
+// Set bit meaning set a bit to 1; Index from 1
+#define __set_bit(__obj, __idx) do {\
+    (__obj) |= ((((__obj) >> (__idx)) | 1) << (__idx));\
+} while(0)
+
+// Unset bit meaning set a bit to 0; Index from 1
+#define __unset_bit(__obj, __idx) do {\
+    (__obj) &= ~(((~(__obj) >> (__idx)) | 1) << (__idx));\
+} while(0)
+
+// Check bit meaning check if a bit is 1; Index from 1
+#define __check_bit(__obj, __idx) ((__obj) ^ ((__obj) & ~(((~(__obj) >> (__idx)) | 1) << (__idx))))
+
+/**
+ * Signal Management
+ * Ignore all except: SIGKILL、SIGSTOP、SIGSEGV、SIGCHLD、SIGCLD、SIGUSR1、SIGUSR2
+ */
+#define __ignore_all_signal(){\
+    struct sigaction sa;\
+    sa.sa_handler = SIG_IGN;\
+    sigfillset(&sa.sa_mask);\
+    sa.sa_flags = 0;\
+\
+    sigaction(SIGFPE, &sa, nil);\
+    sigaction(SIGINT, &sa, nil);\
+    sigaction(SIGQUIT, &sa, nil);\
+    sigaction(SIGILL, &sa, nil);\
+    sigaction(SIGTRAP, &sa, nil);\
+    sigaction(SIGABRT, &sa, nil);\
+    sigaction(SIGTERM, &sa, nil);\
+    sigaction(SIGBUS, &sa, nil);\
+    sigaction(SIGHUP, &sa, nil);\
+    sigaction(SIGSYS, &sa, nil);\
+    sigaction(SIGALRM, &sa, nil);\
+    sigaction(SIGTSTP, &sa, nil);\
+    sigaction(SIGTTIN, &sa, nil);\
+    sigaction(SIGTTOU, &sa, nil);\
+    sigaction(SIGURG, &sa, nil);\
+    sigaction(SIGXCPU, &sa, nil);\
+    sigaction(SIGXFSZ, &sa, nil);\
+    sigaction(SIGPROF, &sa, nil);\
+    sigaction(SIGWINCH, &sa, nil);\
+    sigaction(SIGCONT, &sa, nil);\
+    sigaction(SIGPIPE, &sa, nil);\
+    sigaction(SIGIOT, &sa, nil);\
+    sigaction(SIGIO, &sa, nil);\
+}
 #endif //UTILS_H
