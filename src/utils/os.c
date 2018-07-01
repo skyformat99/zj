@@ -8,7 +8,8 @@
 #include <sys/stat.h>
 #include <sys/un.h>
 #include <sys/socket.h>
-#include <arpa/inet.h>
+//#include <arpa/inet.h>
+#include <netdb.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,15 +19,38 @@
 #include <signal.h>
 #include <poll.h>
 
-#define UN_PATH_SIZ\
+#define __un_path_siz\
         sizeof(struct sockaddr_un)-((size_t) (& ((struct sockaddr_un*) 0)->sun_path))
+
+#define _UNIX_SOCKET_BIT_IDX 1
+#define _PROTO_UDP_BIT_IDX 2
+
+#define __err_new_sys() __err_new(errno, strerror(errno), nil)
 
 static void daemonize(const char *runpath);
 static error_t *remove_all(char *path);
 
+static error_t * set_nonblocking(_i fd);
+static error_t * set_blocking(_i fd);
+
+static error_t * socket_new_and_listen(const char *addr, const char *port, _i *fd);
+static error_t * ip_socket_new(const char *addr, const char *port, _i *fd) __prm_nonnull;
+static error_t * unix_socket_new(const char *path, _i *fd) __prm_nonnull;
+
+static error_t * cli_connect(const char *addr, const char *port, _i *fd);
+
 struct os os = {
     .daemonize = daemonize,
     .rm_all = remove_all,
+
+    .set_nonblocking = set_nonblocking,
+    .set_blocking = set_blocking,
+
+    .socket_new_and_listen = socket_new_and_listen,
+    .ip_socket_new = ip_socket_new,
+    .unix_socket_new = unix_socket_new,
+
+    .connect = cli_connect,
 };
 
 /**
@@ -95,7 +119,44 @@ remove_all_ctw_cb(const char *path, const struct stat *stat __unuse,
 static error_t *
 remove_all(char *path) {
     if(0 != nftw(path, remove_all_ctw_cb, 128, FTW_PHYS/*ignore symlink*/|FTW_DEPTH/*file first*/)){
-        return __err_new(errno, strerror(errno), nil);
+        return __err_new_sys();
+    }
+
+    return nil;
+}
+
+/**
+ * fd
+ */
+//**used on server and client side**
+//@param fd[in]: socket fd
+static error_t *
+set_nonblocking(_i fd) {
+    _i opt;
+    if(0 > (opt = fcntl(fd, F_GETFL))){
+        return __err_new_sys();
+    }
+
+    opt |= O_NONBLOCK;
+    if(0 > fcntl(fd, F_SETFL, opt)){
+        return __err_new_sys();
+    }
+
+    return nil;
+}
+
+//**used on server and client side**
+//@param fd[in]: socket fd
+static error_t *
+set_blocking(_i fd) {
+    _i opt;
+    if(0 > (opt = fcntl(fd, F_GETFL))){
+        return __err_new_sys();
+    }
+
+    opt &= ~O_NONBLOCK;
+    if(0 > fcntl(fd, F_SETFL, opt)){
+        return __err_new_sys();
     }
 
     return nil;
@@ -104,207 +165,198 @@ remove_all(char *path) {
 /**
  * Socket
  */
-// Start server: TCP or UDP,
-// Option zServType: 1 for TCP, 0 for UDP.
-//static _i
-//zgenerate_serv_SD(char *zpHost, char *zpPort, char *zpUNPath, znet_proto_t zProtoType) {
-//    _i zSd = -1,
-//       zErrNo = -1;
-//
-//    if (NULL == zpUNPath) {
-//        struct addrinfo *zpRes_ = NULL,
-//                        *zpAddrInfo_ = NULL;
-//        struct addrinfo zHints_  = {
-//            .ai_flags = AI_PASSIVE|AI_NUMERICHOST|AI_NUMERICSERV
-//        };
-//
-//        zHints_.ai_socktype = (zProtoUDP == zProtoType) ? SOCK_DGRAM : SOCK_STREAM;
-//        zHints_.ai_protocol = (zProtoUDP == zProtoType) ? IPPROTO_UDP:IPPROTO_TCP;
-//
-//        if (0 != (zErrNo = getaddrinfo(zpHost, zpPort, &zHints_, &zpRes_))) {
-//            zPRINT_ERR_EASY(gai_strerror(zErrNo));
-//            exit(1);
-//        }
-//
-//        for (zpAddrInfo_ = zpRes_; NULL != zpAddrInfo_; zpAddrInfo_ = zpAddrInfo_->ai_next) {
-//            if(0 < (zSd = socket( zpAddrInfo_->ai_family, zHints_.ai_socktype, zHints_.ai_protocol))) {
-//                break;
-//            }
-//        }
-//
-//        zCHECK_NEGATIVE_EXIT(zSd);
-//
-//        /* 不等待，直接重用地址与端口 */
-//        zCHECK_NEGATIVE_EXIT(
-//                setsockopt(zSd, SOL_SOCKET, SO_REUSEADDR|SO_REUSEPORT, &zSd, sizeof(_i))
-//                );
-//
-//        zCHECK_NEGATIVE_EXIT(
-//                bind(zSd, zpRes_->ai_addr,
-//                    (AF_INET6 == zpAddrInfo_->ai_family) ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in))
-//                );
-//
-//        freeaddrinfo(zpRes_);
-//    } else {
-//        struct sockaddr_un zUN;
-//
-//        zCHECK_NEGATIVE_EXIT(
-//                zSd = socket(PF_UNIX,
-//                    (zProtoUDP == zProtoType) ? SOCK_DGRAM : SOCK_STREAM,
-//                    0)
-//                );
-//
-//        zUN.sun_family = PF_UNIX;
-//        snprintf(zUN.sun_path, UN_PATH_SIZ,  /* 防止越界 */
-//                "%s",
-//                zpUNPath);
-//
-//        /* 尝试清除可能存在的旧文件 */
-//        unlink(zpUNPath);
-//
-//        /* 不等待，直接重用地址与端口 */
-//        zCHECK_NEGATIVE_EXIT(
-//                setsockopt(zSd, SOL_SOCKET, SO_REUSEADDR|SO_REUSEPORT, &zSd, sizeof(_i))
-//                );
-//
-//        zCHECK_NEGATIVE_EXIT(
-//                bind(zSd, (struct sockaddr *) &zUN, SUN_LEN(&zUN))
-//                );
-//    }
-//
-//    if(zProtoTCP == zProtoType){
-//        zCHECK_NEGATIVE_EXIT( listen(zSd, 6) );
-//    }
-//
-//    return zSd;
-//}
-//
-//
-///*
-// *  将指定的套接字属性设置为非阻塞
-// */
-//static void
-//zset_nonblocking(_i zSd) {
-//    _i zOpts;
-//    zCHECK_NEGATIVE_EXIT( zOpts = fcntl(zSd, F_GETFL) );
-//    zOpts |= O_NONBLOCK;
-//    zCHECK_NEGATIVE_EXIT( fcntl(zSd, F_SETFL, zOpts) );
-//}
-//
-//
-///*
-// *  将指定的套接字属性设置为阻塞
-// */
-//static void
-//zset_blocking(_i zSd) {
-//    _i zOpts;
-//    zCHECK_NEGATIVE_EXIT( zOpts = fcntl(zSd, F_GETFL) );
-//    zOpts &= ~O_NONBLOCK;
-//    zCHECK_NEGATIVE_EXIT( fcntl(zSd, F_SETFL, zOpts) );
-//}
-//
-//
-///* Used by client */
-//static _i
-//ztry_connect(struct sockaddr *zpAddr_, size_t zSiz, _i zIpFamily, _i zSockType, _i zProto) {
-//    _i zSd = socket(zIpFamily, zSockType, zProto);
-//    zCHECK_NEGATIVE_RETURN(zSd, -1);
-//
-//    zset_nonblocking(zSd);
-//
-//    errno = 0;
-//    if (0 == connect(zSd, zpAddr_, zSiz)) {
-//        zset_blocking(zSd);  /* 连接成功后，属性恢复为阻塞 */
-//        return zSd;
-//    } else if (EINPROGRESS == errno) {
-//        struct pollfd zWd_ = {zSd, POLLIN|POLLOUT, -1};
-//        /*
-//         * poll 出错返回 -1，超时返回 0，
-//         * 在超时之前成功建立连接，则返回可用连接数量
-//         * connect 8 秒超时
-//         */
-//        if (0 < poll(&zWd_, 1, 8 * 1000)) {
-//            zset_blocking(zSd);  /* 连接成功后，属性恢复为阻塞 */
-//            return zSd;
-//        }
-//    } else {
-//        zPRINT_ERR_EASY_SYS();
-//    }
-//
-//    /* 已超时或出错 */
-//    close(zSd);
-//    return -1;
-//}
-//
-//
-///*
-// * Used by client
-// * @return success: socket_fd, failed: -1
-// */
-//static _i
-//zconnect(char *zpHost, char *zpPort, char *zpUNPath, znet_proto_t zProto) {
-//     _i zErrNo = -1;
-//
-//     _i zSockType, zProtoType;
-//
-//     if (zProtoUDP == zProto) {
-//         zSockType = SOCK_DGRAM;
-//         //zProtoType = IPPROTO_UDP;
-//         zProtoType = 0;
-//     } else {
-//         zSockType = SOCK_STREAM;
-//         //zProtoType = IPPROTO_TCP;
-//         zProtoType = 0;
-//     }
-//
-//    if (NULL == zpUNPath) {
-//        struct addrinfo *zpRes_ = NULL,
-//                        *zpAddrInfo_ = NULL,
-//                        zHints_ = {
-//                            .ai_socktype = zSockType,
-//                            .ai_protocol = zProtoType,
-//                            //.ai_flags = AI_NUMERICHOST|AI_NUMERICSERV,
-//                        };
-//
-//        if (0 != (zErrNo = getaddrinfo(zpHost, zpPort, &zHints_, &zpRes_))) {
-//            zPRINT_ERR_EASY(gai_strerror(zErrNo));
-//            zErrNo = -1;
-//            goto zEndMark;
-//        }
-//
-//        for (zpAddrInfo_ = zpRes_; NULL != zpAddrInfo_; zpAddrInfo_ = zpAddrInfo_->ai_next) {
-//            if(0 < (zErrNo = ztry_connect(zpAddrInfo_->ai_addr,
-//                            (AF_INET6 == zpAddrInfo_->ai_family) ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in),
-//                            zpAddrInfo_->ai_family, zSockType, zProtoType))) {
-//
-//                freeaddrinfo(zpRes_);
-//                goto zEndMark;
-//            }
-//        }
-//
-//        freeaddrinfo(zpRes_);
-//        zErrNo = -1;
-//        goto zEndMark;
-//    } else {
-//        struct sockaddr_un zUN;
-//        zUN.sun_family = PF_UNIX;
-//        snprintf(zUN.sun_path, UN_PATH_SIZ,  /* 防止越界 */
-//                "%s",
-//                zpUNPath);
-//
-//        if (0 > (zErrNo = ztry_connect((struct sockaddr *) &zUN,
-//                        SUN_LEN(&zUN),
-//                        PF_UNIX, zSockType, zProtoType))) {
-//            zErrNo = -1;
-//            goto zEndMark;
-//        }
-//    }
-//
-//zEndMark:
-//    return zErrNo;
-//}
-//
-//
+
+//**used on server side**
+//@param addr[in]: unix socket path, or serv ip, or url
+//@param port[in]: serv port
+//@param fd[in and out]: [in] used as bit mark, [out]: generated socket fd
+static error_t *
+socket_new_and_listen(const char *addr, const char *port, _i *fd){
+    if(!(addr && fd)){
+        return __err_new(-1, "param<addr, fd> can't be nil", nil);
+    }
+
+    error_t *e;
+
+    if(__check_bit(*fd, _UNIX_SOCKET_BIT_IDX)){
+        e = unix_socket_new(addr, fd);
+    } else {
+        e = ip_socket_new(addr, port, fd);
+    }
+
+    if(nil != e){
+        return __err_new(-1, "socket create failed", e);
+    }
+
+    if(0 >listen(*fd, 6)){
+        return __err_new(-1, "socket listen failed", nil);
+    }
+
+    return nil;
+}
+
+static void
+addrinfo_drop(struct addrinfo **ais){
+    if(nil != ais && nil != *ais){
+        freeaddrinfo(*ais);
+    }
+}
+
+//**used on server side**
+//@param addr[in]: serv ip or url
+//@param port[in]: serv port
+//@param fd[in and out]: [in] UDP if second_bit setted, or TCP; [out] ==> generated socket fd
+static error_t *
+ip_socket_new(const char *addr, const char *port, _i *fd){
+    struct addrinfo hints_  = {
+        .ai_flags = AI_PASSIVE|AI_NUMERICSERV,
+        .ai_socktype = __check_bit(*fd, _PROTO_UDP_BIT_IDX) ? SOCK_DGRAM : SOCK_STREAM,
+        .ai_protocol = __check_bit(*fd, _PROTO_UDP_BIT_IDX) ? IPPROTO_UDP: IPPROTO_TCP,
+    };
+
+    __drop(addrinfo_drop) struct addrinfo *ais = nil;
+    struct addrinfo *ai;
+    _i rv;
+
+    if (0 != (rv = getaddrinfo(addr, port, &hints_, &ais))) {
+        return __err_new(rv, gai_strerror(rv), nil);
+    }
+
+    for (ai = ais; nil != ai; ai = ai->ai_next) {
+        if(0 < (*fd = socket( ai->ai_family, hints_.ai_socktype, hints_.ai_protocol))) {
+            break;
+        }
+    }
+
+    if(0 > *fd){
+        return __err_new(-1, "socket create failed", nil)
+    }
+
+    if(0 > setsockopt(*fd, SOL_SOCKET, SO_REUSEADDR|SO_REUSEPORT, fd, sizeof(_i))){
+        close(*fd);
+        return __err_new_sys()
+    }
+
+    if(0 > bind(*fd, ais->ai_addr,
+                (AF_INET6 == ai->ai_family) ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in))){
+        close(*fd);
+        return __err_new_sys()
+    }
+
+    return nil;
+}
+
+//**used on server side**
+//@param path[in]: unix socket path
+//@param fd[in and out]: [in] UDP if second_bit setted, or TCP; [out] ==> generated socket fd
+static error_t *
+unix_socket_new(const char *path, _i *fd){
+    struct sockaddr_un un = {
+        .sun_family = PF_UNIX,
+    };
+    snprintf(un.sun_path, __un_path_siz, "%s", path);
+
+    if(0 > (*fd = socket(PF_UNIX, __check_bit(*fd, _PROTO_UDP_BIT_IDX) ? SOCK_DGRAM : SOCK_STREAM, 0))){
+        *fd = -1;
+        return __err_new_sys();
+    }
+
+    if(0 > setsockopt(*fd, SOL_SOCKET, SO_REUSEADDR|SO_REUSEPORT, fd, sizeof(_i))){
+        close(*fd);
+        *fd = -1;
+        return __err_new_sys();
+    }
+
+    if(0 > bind(*fd, (struct sockaddr *) &un, sizeof(struct sockaddr_un))){
+        close(*fd);
+        *fd = -1;
+        return __err_new_sys();
+    }
+
+    return nil;
+}
+
+// timeout: 8000ms(8 secs)
+// poll return: 0 for timeout, 1 for success, -1 for error
+#define __do_connect(__sockaddr, __siz) ({\
+    error_t *e = nil;\
+    if(nil == (e = set_nonblocking(*fd))){\
+        if (0 == connect(*fd, __sockaddr, __siz)) {\
+            if(nil != (e = set_blocking(*fd))){\
+                close(*fd);\
+                e = __err_new(-1, "socket: set_blocking failed", e);\
+            }\
+        } else {\
+            if (EINPROGRESS == errno) {\
+                struct pollfd ev = {\
+                    .fd = *fd,\
+                    .events = POLLIN|POLLOUT,\
+                    .revents = -1,\
+                };\
+\
+                if (0 < poll(&ev, 1, 8 * 1000)) {\
+                    if(nil != (e = set_blocking(*fd))){\
+                        close(*fd);\
+                        e = __err_new(-1, "socket: set_blocking failed", e);\
+                    }\
+                } else {\
+                    e = __err_new_sys();\
+                }\
+            } else {\
+                e = __err_new_sys();\
+            }\
+        }\
+    } else {\
+        e = __err_new(-1, "socket: set_nonblocking failed", e);\
+    }\
+    e;\
+})
+
+//**used on client side**
+//@param addr[in]: unix socket path, or serv ip, or url
+//@param port[in]: serv port
+//@param fd[in and out]: [in] used as bit mark, [out]: connected fd
+static error_t *
+cli_connect(const char *addr, const char *port, _i *fd) {
+    if(!(addr && fd)){
+        return __err_new(-1, "param<addr, fd> can't be nil", nil);
+    }
+
+    _i rv;
+    error_t *e = nil;
+
+    if (__check_bit(*fd, _UNIX_SOCKET_BIT_IDX)) {
+        struct sockaddr_un un = {
+            .sun_family = PF_UNIX,
+        };
+        snprintf(un.sun_path, __un_path_siz, "%s", addr);
+
+        if(nil != (e = __do_connect((struct sockaddr *)&un, sizeof(struct sockaddr_un)))){
+            return e;
+        }
+    } else {
+        __drop(addrinfo_drop) struct addrinfo *ais = nil;
+        struct addrinfo *ai;
+
+        if (0 > (rv = getaddrinfo(addr, port, nil, &ais))){
+            return __err_new(rv, gai_strerror(rv), nil);
+        }
+
+        *fd = -1;
+        for (ai = ais; nil != ai; ai = ai->ai_next){
+            if(nil == (e = __do_connect(ai->ai_addr, (AF_INET6 == ai->ai_family) ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in)))){
+                break;
+            }
+        }
+
+        if(nil != e){
+            return __err_new(-1, "connect failed", nil);
+        }
+    }
+
+    return nil;
+}
+
 //static _i
 //zsendto(_i zSd, void *zpBuf, size_t zLen,
 //        struct sockaddr *zpAddr_, socklen_t zAddrSiz) {
@@ -318,8 +370,8 @@ remove_all(char *path) {
 //zsend(_i zSd, void *zpBuf, size_t zLen) {
 //    return send(zSd, zpBuf, zLen, MSG_NOSIGNAL);
 //}
-//
-//
+
+
 //static _i
 //zsendmsg(_i zSd, struct iovec *zpVec_, size_t zVecSiz,
 //        struct sockaddr *zpAddr_, socklen_t zAddrSiz) {
@@ -328,15 +380,15 @@ remove_all(char *path) {
 //        .msg_namelen = zAddrSiz,
 //        .msg_iov = zpVec_,
 //        .msg_iovlen = zVecSiz,
-//        .msg_control = NULL,
+//        .msg_control = nil,
 //        .msg_controllen = 0,
 //        .msg_flags = 0
 //    };
 //
 //    return sendmsg(zSd, &zMsg_, MSG_NOSIGNAL);
 //}
-//
-//
+
+
 //static _i
 //zrecv_all(_i zSd, void *zpBuf, size_t zLen, struct sockaddr *zpAddr_, socklen_t *zpAddrSiz) {
 //    return recvfrom(zSd, zpBuf, zLen, MSG_WAITALL|MSG_NOSIGNAL, zpAddr_, zpAddrSiz);
@@ -347,8 +399,8 @@ remove_all(char *path) {
 //// zrecv_nohang(_i zSd, void *zpBuf, size_t zLen, struct sockaddr *zpAddr_, socklen_t *zpAddrSiz) {
 ////     return recvfrom(zSd, zpBuf, zLen, MSG_DONTWAIT|MSG_NOSIGNAL, zpAddr_, zpAddrSiz);
 //// }
-//
-//
+
+
 ///*
 // * 将文本格式的ip地址转换成二进制无符号整型数组(按网络字节序，即大端字节序)，以及反向转换
 // * inet_pton: 返回 1 表示成功，返回 0 表示指定的地址无效，返回 -1 表示指定的ip类型错误
@@ -379,8 +431,8 @@ remove_all(char *path) {
 //
 //    return zErrNo;
 //}
-//
-//
+
+
 //static _i
 //zconvert_ip_bin_to_str(_ull *zpIpNumeric/* _ull[2] */, zip_t zIpType, char *zpResOUT/* char[INET6_ADDRSTRLEN] */) {
 //    _i zErrNo = -1;
@@ -407,20 +459,20 @@ remove_all(char *path) {
 //        zIpAddr_.__in6_u.__u6_addr8[14] = * (zp + 6);
 //        zIpAddr_.__in6_u.__u6_addr8[15] = * (zp + 7);
 //
-//        if (NULL != inet_ntop(AF_INET6, &zIpAddr_, zpResOUT, INET6_ADDRSTRLEN)) {
+//        if (nil != inet_ntop(AF_INET6, &zIpAddr_, zpResOUT, INET6_ADDRSTRLEN)) {
 //            zErrNo = 0;  /* 转换成功 */
 //        }
 //    } else {
 //        struct in_addr zIpAddr_ = { .s_addr =  zpIpNumeric[0] };
-//        if (NULL != inet_ntop(AF_INET, &zIpAddr_, zpResOUT, INET_ADDRSTRLEN)) {
+//        if (nil != inet_ntop(AF_INET, &zIpAddr_, zpResOUT, INET_ADDRSTRLEN)) {
 //            zErrNo = 0;  /* 转换成功 */
 //        }
 //    }
 //
 //    return zErrNo;
 //}
-//
-//
+
+
 ///*
 // * 进程间传递文件描述符
 // * 用于实现多进程模型服务器
@@ -457,7 +509,7 @@ remove_all(char *path) {
 //
 //        //.msg_iov = &zVec_,
 //        //.msg_iovlen = 1,
-//        .msg_iov = NULL,
+//        .msg_iov = nil,
 //        .msg_iovlen = 0,
 //
 //        .msg_control = zCmsgBuf,
@@ -525,7 +577,7 @@ remove_all(char *path) {
 //    char zCmsgBuf[CMSG_SPACE(sizeof(_i))];
 //
 //    struct msghdr zMsg_ = {
-//        .msg_name = NULL,
+//        .msg_name = nil,
 //        .msg_namelen = 0,
 //
 //        .msg_iov = &zVec_,
@@ -544,7 +596,7 @@ remove_all(char *path) {
 //     * zsend_fd() 只发送了一个字节的常规数据
 //     */
 //    if (1 == recvmsg(zFd, &zMsg_, 0)) {
-//        if (NULL == CMSG_FIRSTHDR(&zMsg_)) {
+//        if (nil == CMSG_FIRSTHDR(&zMsg_)) {
 //            return -1;
 //        } else {
 //            /*
@@ -558,4 +610,5 @@ remove_all(char *path) {
 //    }
 //}
 
-#undef UN_PATH_SIZ
+#undef __un_path_siz
+#undef __err_new_sys

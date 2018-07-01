@@ -178,7 +178,7 @@ struct error_t{
 
 /**
  * Signal Management
- * Ignore all except: SIGKILL、SIGSTOP、SIGSEGV、SIGCHLD、SIGCLD、SIGUSR1、SIGUSR2
+ * Ignore most signals, except: SIGKILL、SIGSTOP、SIGSEGV、SIGCHLD、SIGCLD、SIGUSR1、SIGUSR2
  */
 #define __ignore_all_signal(){\
     struct sigaction sa;\
