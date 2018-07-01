@@ -101,12 +101,11 @@ remove_all(char *path) {
     return nil;
 }
 
-///**
-// * Socket
-// */
-//
-//// Start server: TCP or UDP,
-//// Option zServType: 1 for TCP, 0 for UDP.
+/**
+ * Socket
+ */
+// Start server: TCP or UDP,
+// Option zServType: 1 for TCP, 0 for UDP.
 //static _i
 //zgenerate_serv_SD(char *zpHost, char *zpPort, char *zpUNPath, znet_proto_t zProtoType) {
 //    _i zSd = -1,

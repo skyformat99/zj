@@ -204,10 +204,7 @@ struct error_t{
     sigaction(SIGXCPU, &sa, nil);\
     sigaction(SIGXFSZ, &sa, nil);\
     sigaction(SIGPROF, &sa, nil);\
-    sigaction(SIGWINCH, &sa, nil);\
     sigaction(SIGCONT, &sa, nil);\
     sigaction(SIGPIPE, &sa, nil);\
-    sigaction(SIGIOT, &sa, nil);\
-    sigaction(SIGIO, &sa, nil);\
 }
 #endif //_UTILS_H
