@@ -56,6 +56,10 @@ handler_register(void){
     }
 }
 
+error_t *e;
+static _i status;
+static source_t s;
+
 #define __env__ {\
     e = nil;\
     status = -1;\
@@ -64,23 +68,8 @@ handler_register(void){
     s.drop = nil;\
 }
 
-//NNG_HTTP_STATUS_BAD_REQUEST 400
-//NNG_HTTP_STATUS_NOT_FOUND 404
-//NNG_HTTP_STATUS_METHOD_NOT_ALLOWED 405
-//NNG_HTTP_STATUS_INTERNAL_SERVER_ERROR 500
-void *
-thread_worker(void *info __unuse){
-    error_t *e;
-    static _i status;
-    static source_t s;
-
-    __env__
-    if(nil != (e = httpcli.get("http://localhost:9000/body_add_one", &s, &status))){
-        __display_and_fatal(e);
-    }
-    So(405, status);
-    s.drop(&s);
-
+void
+serv_200_OK(void){
     __env__
     if(nil != (e = httpcli.post("http://localhost:9000/body_add_one", &s, &status))){
         __display_and_fatal(e);
@@ -89,23 +78,6 @@ thread_worker(void *info __unuse){
     So(0, strcmp("101", s.data));
     So(sizeof("101") - 1, s.dsiz);
     So(utils.nng_drop, s.drop);
-    s.drop(&s);
-
-    //test bad request info
-    __env__
-    s.dsiz = 1000000000;
-    if(nil != (e = httpcli.post("http://localhost:9000/body_add_one", &s, &status))){
-        __display_and_clean(e);
-    }
-    So(-1, status);
-    So(utils.non_drop, s.drop);
-    s.drop(&s);
-
-    __env__
-    if(nil != (e = httpcli.post("http://localhost:9000/__not_exist__", &s, &status))){
-        __display_and_fatal(e);
-    }
-    So(404, status);
     s.drop(&s);
 
     __env__
@@ -117,6 +89,15 @@ thread_worker(void *info __unuse){
     So(sizeof("100") - 1, s.dsiz);
     So(utils.nng_drop, s.drop);
     s.drop(&s);
+}
+
+void
+serv_405_MethodNotAllowed(void){ __env__
+    if(nil != (e = httpcli.get("http://localhost:9000/body_add_one", &s, &status))){
+        __display_and_fatal(e);
+    }
+    So(405, status);
+    s.drop(&s);
 
     __env__
     if(nil != (e = httpcli.post("http://localhost:9000/echo", &s, &status))){
@@ -124,6 +105,27 @@ thread_worker(void *info __unuse){
     }
     So(405, status);
     s.drop(&s);
+}
+
+void
+serv_404_NotFound(void){
+    __env__
+    if(nil != (e = httpcli.post("http://localhost:9000/__not_exist__", &s, &status))){
+        __display_and_fatal(e);
+    }
+    So(404, status);
+    s.drop(&s);
+}
+
+//NNG_HTTP_STATUS_BAD_REQUEST 400
+//NNG_HTTP_STATUS_NOT_FOUND 404
+//NNG_HTTP_STATUS_METHOD_NOT_ALLOWED 405
+//NNG_HTTP_STATUS_INTERNAL_SERVER_ERROR 500
+void *
+thread_worker(void *info __unuse){
+    serv_200_OK();
+    serv_405_MethodNotAllowed();
+    serv_404_NotFound();
 
     pthread_mutex_lock(&mlock);
     pthread_mutex_unlock(&mlock);

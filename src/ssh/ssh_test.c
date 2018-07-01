@@ -25,18 +25,15 @@ thread_safe_checker(void *_ __unuse){
     return nil;
 }
 
-_i
-main(void){
-    error_t *e = nil;
-    _i exit_status = 0;
-    source_t cmdout;
-    cmdout.data = nil;
-    cmdout.dsiz = 0;
-    cmdout.drop = nil;
+error_t *e = nil;
+_i exit_status = 0;
+source_t cmdout = {nil, 0, nil};
 
-    struct timespec tsp;
-    time_t now;
+struct timespec tsp;
+time_t now;
 
+void
+many_threads_safe(void){
     _i i = 0;
     while(i < __threads_total){
         threadpool.addjob(thread_safe_checker, nil);
@@ -54,36 +51,60 @@ main(void){
 
     So(0, i);
     So(__threads_total, cnter);
+}
 
-    // e = ssh.exec("ls", &exit_status, nil, "localhost", 22, UNIT_TEST_USER, 3);
-    // if(nil, e) {
-    //     __display_and_clean(e);
-    // }
-    // So(0, exit_status);
+void
+success_without_output(void){
+    e = ssh.exec("ls", &exit_status, nil, "localhost", 22, UNIT_TEST_USER, 3);
+    if(nil, e) {
+        __display_and_clean(e);
+    }
+    So(0, exit_status);
+}
 
-    // e = ssh.exec("ls /root/|", &exit_status, nil, "localhost", 22, UNIT_TEST_USER, 3);
-    // if(nil, e) {
-    //     __display_and_clean(e);
-    // }
-    // SoN(0, exit_status);
+void
+fail_without_output(void){
+    e = ssh.exec("ls /root/|", &exit_status, nil, "localhost", 22, UNIT_TEST_USER, 3);
+    if(nil, e) {
+        __display_and_clean(e);
+    }
+    SoN(0, exit_status);
+}
 
-    // e = ssh.exec("ls", &exit_status, &cmdout, "localhost", 22, UNIT_TEST_USER, 3);
-    // if(nil, e) {
-    //     __display_and_clean(e);
-    // }
-    // So(0, exit_status);
-    // SoN(nil, cmdout.data);
-    // //printf("||--> dsiz: %ld, data: %s\n", cmdout.dsiz, (char *)cmdout.data);
-    // So(strlen(cmdout.data), cmdout.dsiz);
-    // cmdout.drop(&cmdout);
+void
+success_with_output(void){
+    e = ssh.exec("ls", &exit_status, &cmdout, "localhost", 22, UNIT_TEST_USER, 3);
+    if(nil, e) {
+        __display_and_clean(e);
+    }
+    So(0, exit_status);
+    SoN(nil, cmdout.data);
+    //printf("||--> dsiz: %ld, data: %s\n", cmdout.dsiz, (char *)cmdout.data);
+    So(1 + strlen(cmdout.data), cmdout.dsiz);
+    cmdout.drop(&cmdout);
+}
 
-    // e = ssh.exec("ls /root/|", &exit_status, &cmdout, "localhost", 22, UNIT_TEST_USER, 3);
-    // if(nil, e) {
-    //     __display_and_clean(e);
-    // }
-    // SoN(0, exit_status);
-    // SoN(nil, cmdout.data);
-    // //printf("||--> dsiz: %ld, data: %s\n", cmdout.dsiz, (char *)cmdout.data);
-    // So(strlen(cmdout.data), cmdout.dsiz);
-    // cmdout.drop(&cmdout);
+void
+fail_with_output(void){
+    e = ssh.exec("ls /root/|", &exit_status, &cmdout, "localhost", 22, UNIT_TEST_USER, 3);
+    if(nil, e) {
+        __display_and_clean(e);
+    }
+    SoN(0, exit_status);
+    SoN(nil, cmdout.data);
+    //printf("||--> dsiz: %ld, data: %s\n", cmdout.dsiz, (char *)cmdout.data);
+    So(1 + strlen(cmdout.data), cmdout.dsiz);
+    cmdout.drop(&cmdout);
+}
+
+_i
+main(void){
+    many_threads_safe();
+
+#ifndef _OS_DARWIN
+    success_without_output();
+    fail_without_output();
+    success_with_output();
+    fail_with_output();
+#endif
 }

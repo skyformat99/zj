@@ -71,49 +71,14 @@ thread_worker(void *info){
     return nil;
 }
 
-_i
-main(void){
-    error_t *e = nil;
-    _i rv = 0;
-    static char *leader_url = "tcp://localhost:9000";
+static char *leader_url = "tcp://localhost:9000";
+char slave_url[__node_total][64];
+error_t *e;
+_i rv, i;
+nng_socket sock;
 
-    nng_socket sock;
-    e = bus.new(&sock);
-    if(nil != e){
-        __display_and_clean(e);
-        exit(1);
-    }
-
-    e = bus.listen(leader_url, &sock);
-    if(nil != e){
-        __display_and_clean(e);
-        exit(1);
-    }
-
-    //timeout 100ms
-    rv = nng_setopt_ms(sock, NNG_OPT_RECVTIMEO, 100);
-    if(0 != rv){
-        __fatal(nng_strerror(rv));
-    }
-
-    char slave_url[__node_total][64];
-    _i i = 0;
-    while(i < __node_total){
-        struct bus_info *bi = __malloc(sizeof(struct bus_info));
-        snprintf(bi->self_url, 64, "tcp://localhost:%d", 9001 + i);
-        strcpy(bi->remote_url, leader_url);
-
-        strcpy(slave_url[i], bi->self_url);
-
-        threadpool.addjob(thread_worker, bi);
-        ++i;
-    }
-
-    pthread_mutex_lock(&mlock);
-    slave_cnter = 0;
-    pthread_mutex_unlock(&mlock);
-    pthread_cond_broadcast(&cond);
-
+void
+serv_send(void){
     i = 0;
     while(i < __node_total){
         e = bus.recv(sock, nil);
@@ -125,7 +90,10 @@ main(void){
     }
 
     So(__node_total, i);
+}
 
+void
+serv_recv(void){
     i = 0;
     while(i < __node_total){
         e = bus.dial(sock, slave_url[i]);
@@ -148,4 +116,41 @@ main(void){
 
     nng_close(sock);
     So(__node_total, i);
+}
+
+_i
+main(void){
+    e = bus.new(&sock);
+    if(nil != e){
+        __display_and_fatal(e);
+    }
+
+    e = bus.listen(leader_url, &sock);
+    if(nil != e){
+        __display_and_fatal(e);
+    }
+
+    //timeout 100ms
+    rv = nng_setopt_ms(sock, NNG_OPT_RECVTIMEO, 100);
+    if(0 != rv){
+        __fatal(nng_strerror(rv));
+    }
+
+    for(i = 0; i < __node_total; ++i){
+        struct bus_info *bi = __malloc(sizeof(struct bus_info));
+        snprintf(bi->self_url, 64, "tcp://localhost:%d", 9001 + i);
+        strcpy(bi->remote_url, leader_url);
+
+        strcpy(slave_url[i], bi->self_url);
+
+        threadpool.addjob(thread_worker, bi);
+    }
+
+    pthread_mutex_lock(&mlock);
+    slave_cnter = 0;
+    pthread_mutex_unlock(&mlock);
+    pthread_cond_broadcast(&cond);
+
+    serv_send();
+    serv_recv();
 }

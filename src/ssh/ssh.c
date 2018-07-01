@@ -125,7 +125,7 @@ exec_once(char *cmd, _i *exit_status, source_t *cmdout,
     if(nil != cmdout){
 #define __max_recv_siz 2 * 1024
         cmdout->dsiz = 0;
-        cmdout->data = __malloc(__max_recv_siz);
+        cmdout->data = __malloc(1 + __max_recv_siz);
         cmdout->drop = utils.sys_drop;
 
         cmdout->dsiz += sprintf(cmdout->data + cmdout->dsiz, "\n\x1b[31;01m"
@@ -146,6 +146,10 @@ exec_once(char *cmd, _i *exit_status, source_t *cmdout,
             rcsiz = ssh_channel_read(channel, cmdout->data + cmdout->dsiz, __max_recv_siz - cmdout->dsiz, 0);
         }
 #undef __max_recv_siz
+
+        ((char *)cmdout->data)[cmdout->dsiz] = '\0';
+        ++cmdout->dsiz;
+        cmdout->data = __realloc(cmdout->data, cmdout->dsiz);
     }
 
     ssh_channel_send_eof(channel);

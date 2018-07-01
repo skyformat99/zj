@@ -26,7 +26,9 @@ inline static _ui urand(void);
 static void nng_drop(source_t *s);
 static void sys_drop(source_t *s);
 static void non_drop(source_t *s);
+
 static void *must_alloc(size_t siz, const char * const file, const _i line, const char *const func);
+static void * must_realloc(void *orig, size_t newsiz, const char * const file, const _i line, const char *const func);
 
 struct utils utils = {
     .ncpus = ncpus,
@@ -39,7 +41,9 @@ struct utils utils = {
     .nng_drop = nng_drop,
     .sys_drop = sys_drop,
     .non_drop = non_drop,
+
     .alloc = must_alloc,
+    .realloc = must_realloc,
 };
 
 inline static _i
@@ -89,6 +93,15 @@ must_alloc(size_t siz, const char * const file, const _i line, const char *const
     return p;
 }
 
+static void *
+must_realloc(void *orig, size_t newsiz, const char * const file, const _i line, const char *const func){
+    void *p = realloc(orig, newsiz);
+    if(nil == p){
+        fatal("the fucking world is over!!!!", file, line, func);
+    };
+    return p;
+}
+
 /**
  * LOG
  */
@@ -121,10 +134,10 @@ logfd_init(void){
 #endif
 }
 
-//rotate per 100 * 10000 logs
+//rotate per 1000 * 10000 logs
 void
 logrotate(void){
-    if(100 * 10000 < log_wr_cnt){
+    if(1000 * 10000 < log_wr_cnt){
         close(logfd);
         unlink(logvec[9]);
         _i i = 8;

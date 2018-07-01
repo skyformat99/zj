@@ -60,7 +60,9 @@ struct utils{
     void (*nng_drop) (source_t *) __prm_nonnull;
     void (*sys_drop) (source_t *) __prm_nonnull;
     void (*non_drop) (source_t *) __prm_nonnull;
-    void* (*alloc) (size_t siz, const char * const file, const _i line, const char *const func);
+
+    void* (*alloc) (size_t, const char * const, const _i, const char *const);
+    void * (*realloc)(void *, size_t, const char * const, const _i, const char *const);
 };
 
 //For Error Print
@@ -119,13 +121,15 @@ struct error_t{
 // For Unit Tests
 #define So(__v1, __v2) do{\
     if((__v1) == (__v2)){\
-        printf("\x1b[32;01mPass < %s == %s >\x1b[00m\tFile: %s\tLine: %d\n",\
-                #__v1, #__v2, __FILE__, __LINE__);\
+        printf("\x1b[32;01mPass < %s == %s >\x1b[00m\tat: %s(), %s, %d\n",\
+                #__v1, #__v2, __func__, __FILE__, __LINE__);\
     } else {\
         printf("\x1b[33;01mFailed < %s == %s >: %lld != %lld\x1b[00m\n"\
-                "\tFile: %s\n"\
-                "\tLine: %d\n",\
-                #__v1, #__v2, (_lli)(__v1), (_lli)(__v2), __FILE__, __LINE__);\
+                "\tfunc: %s\n"\
+                "\tfile: %s\n"\
+                "\tline: %d\n",\
+                #__v1, #__v2, (_lli)(__v1), (_lli)(__v2),\
+                __func__, __FILE__, __LINE__);\
         exit(1);\
     }\
 }while(0)
@@ -133,13 +137,15 @@ struct error_t{
 #define SoN(__v1, __v2) do{\
     if((__v1) == (__v2)){\
         printf("\x1b[33;01mFailed < %s != %s >: %lld != %lld\x1b[00m\n"\
-                "\tFile: %s\n"\
-                "\tLine: %d\n",\
-                #__v1, #__v2, (_lli)(__v1), (_lli)(__v2), __FILE__, __LINE__);\
+                "\tfunc: %s\n"\
+                "\tfile: %s\n"\
+                "\tline: %d\n",\
+                #__v1, #__v2, (_lli)(__v1), (_lli)(__v2),\
+                __func__, __FILE__, __LINE__);\
         exit(1);\
     } else {\
-        printf("\x1b[32;01mPass < %s != %s >\x1b[00m\tFile: %s\tLine: %d\n",\
-                #__v1, #__v2, __FILE__, __LINE__);\
+        printf("\x1b[32;01mPass < %s != %s >\x1b[00m\tat: %s(), %s, %d\n",\
+                #__v1, #__v2, __func__, __FILE__, __LINE__);\
     }\
 }while(0)
 
@@ -148,6 +154,10 @@ struct error_t{
  */
 #define __malloc(__siz) ({\
     utils.alloc(__siz, __FILE__, __LINE__, __func__);\
+})
+
+#define __realloc(__orig, __newsiz) ({\
+    utils.realloc(__orig, __newsiz, __FILE__, __LINE__, __func__);\
 })
 
 /**
