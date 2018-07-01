@@ -33,9 +33,11 @@ static error_t *remove_all(char *path);
 static error_t * set_nonblocking(_i fd);
 static error_t * set_blocking(_i fd);
 
-static error_t * socket_new_and_listen(const char *addr, const char *port, _i *fd);
+static error_t * socket_new(const char *addr, const char *port, _i *fd);
 static error_t * ip_socket_new(const char *addr, const char *port, _i *fd) __prm_nonnull;
 static error_t * unix_socket_new(const char *path, _i *fd) __prm_nonnull;
+
+static error_t * serv_listen(_i fd);
 
 static error_t * cli_connect(const char *addr, const char *port, _i *fd);
 
@@ -46,7 +48,7 @@ struct os os = {
     .set_nonblocking = set_nonblocking,
     .set_blocking = set_blocking,
 
-    .socket_new_and_listen = socket_new_and_listen,
+    .socket_new = socket_new,
     .ip_socket_new = ip_socket_new,
     .unix_socket_new = unix_socket_new,
 
@@ -165,13 +167,29 @@ set_blocking(_i fd) {
 /**
  * Socket
  */
+static void
+addrinfo_drop(struct addrinfo **ais){
+    if(nil != ais && nil != *ais){
+        freeaddrinfo(*ais);
+    }
+}
+
+//@param fd[in]:
+static error_t *
+serv_listen(_i fd){
+    if(0 >listen(fd, 6)){
+        return __err_new(-1, "socket listen failed", nil);
+    }
+
+    return nil;
+}
 
 //**used on server side**
 //@param addr[in]: unix socket path, or serv ip, or url
 //@param port[in]: serv port
 //@param fd[in and out]: [in] used as bit mark, [out]: generated socket fd
 static error_t *
-socket_new_and_listen(const char *addr, const char *port, _i *fd){
+socket_new(const char *addr, const char *port, _i *fd){
     if(!(addr && fd)){
         return __err_new(-1, "param<addr, fd> can't be nil", nil);
     }
@@ -188,18 +206,7 @@ socket_new_and_listen(const char *addr, const char *port, _i *fd){
         return __err_new(-1, "socket create failed", e);
     }
 
-    if(0 >listen(*fd, 6)){
-        return __err_new(-1, "socket listen failed", nil);
-    }
-
     return nil;
-}
-
-static void
-addrinfo_drop(struct addrinfo **ais){
-    if(nil != ais && nil != *ais){
-        freeaddrinfo(*ais);
-    }
 }
 
 //**used on server side**
