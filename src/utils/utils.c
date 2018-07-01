@@ -7,7 +7,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 
-#ifdef OS_FREEBSD
+#ifdef _OS_FREEBSD
 #include <malloc_np.h>
 #endif
 
@@ -44,7 +44,7 @@ struct utils utils = {
 
 inline static _i
 ncpus(void){
-#ifdef Z_OS_LINUX
+#ifdef _OS_LINUX
     return sysconf(_SC_NPROCESSORS_ONLN);
 #else
     return 8;
@@ -111,7 +111,7 @@ static _i log_wr_cnt = 0;
 
 __init static void
 logfd_init(void){
-#ifdef Z_RELEASE
+#ifdef _RELEASE
     logfd = open(logvec[0], O_WRONLY|O_CREAT|O_APPEND, 0600);
     if(-1 == logfd){
         __fatal("can NOT open logfile");

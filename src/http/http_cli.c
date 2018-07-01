@@ -9,7 +9,7 @@
 #include "http_cli.h"
 #include "utils.h"
 
-#ifdef OS_FREEBSD
+#ifdef _OS_FREEBSD
 #include <limits.h>
 #endif
 
@@ -89,7 +89,7 @@ http_req(const char *urlstr, const char *method, source_t *s, _i *status_code){
 
     if(nil != s->data){
         if(__http_req_max_body_siz < s->dsiz){
-            return __err_new(-1, "reqbody data size too big", nil);
+            return __err_new(-1, "data size too big", nil);
         }
 
         if(0 != (rv = nng_http_req_copy_data(cl.req, s->data, s->dsiz))){

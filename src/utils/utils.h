@@ -1,7 +1,7 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-#include "os_target.h"
+#include "env.h"
 
 #ifndef _XOPEN_SOURCE
 #define _XOPEN_SOURCE 700

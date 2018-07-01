@@ -7,21 +7,19 @@ cd $curdir
 
 osname=`uname -s`
 
-echo "#ifndef OS_TARGET_H" > ./os_target.h
-echo "#define OS_TARGET_H" >> ./os_target.h
-
-echo "#define Z_RELEASE" >> ./os_target.h
+echo "#ifndef _OS_TARGET_H" > ./env.h
+echo "#define _OS_TARGET_H" >> ./env.h
 
 if [[ "FreeBSD" == $osname ]]; then
-    echo "#define OS_FREEBSD">>./os_target.h
+    echo "#define _OS_FREEBSD">>./env.h
 elif [[ "Darwin" == $osname ]]; then
-    echo "#define OS_DARWIN">>./os_target.h
+    echo "#define _OS_DARWIN">>./env.h
 elif [[ "Linux" == $osname ]]; then
-    echo "#define OS_LINUX">>./os_target.h
+    echo "#define _OS_LINUX">>./env.h
 else
-    echo "#define OS_OTHER">>./os_target.h
+    echo "#define _OS_OTHER">>./env.h
 fi
 
-echo "#define UNIT_TEST_USER \"`whoami`\"">>./os_target.h
+echo "#define UNIT_TEST_USER \"`whoami`\"">>./env.h
 
-echo "#endif //OS_TARGET_H">>./os_target.h
+echo "#endif //_OS_TARGET_H">>./env.h

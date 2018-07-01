@@ -1,5 +1,5 @@
-#ifndef Z_HTTP_SERV_H
-#define Z_HTTP_SERV_H
+#ifndef _HTTP_SERV_H
+#define _HTTP_SERV_H
 
 #include <pthread.h>
 #include "nng/nng.h"
@@ -110,4 +110,4 @@ struct http_serv{
             nng_aio_finish(aio, 0);\
         }
 
-#endif //Z_HTTP_SERV_H
+#endif //_HTTP_SERV_H

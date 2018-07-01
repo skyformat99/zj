@@ -11,8 +11,7 @@ if [[ 0 -ne $? ]]; then
 fi
 
 # **** #
-eval cc -g ${name}.c `cat ${ZJ_PATH}/ccpath` -DUNIT_TEST -o ${path}/${name}\
-    -DUNIT_TEST_HTTP_SERV\
+eval cc -g ${name}.c `cat ${ZJ_PATH}/ccpath` -o ${path}/${name}\
     "`perl -ane 'print "$F[1]" if /^-L.*nng/' ${ZJ_PATH}/ccpath | head -1`/libnng.a"\
     -lpthread
 

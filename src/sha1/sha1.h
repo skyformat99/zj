@@ -1,5 +1,5 @@
-#ifndef Z_NNG_SHA1_H
-#define Z_NNG_SHA1_H
+#ifndef _SHA1_H
+#define _SHA1_H
 
 #include <stdint.h>
 #include <sys/types.h>
@@ -25,4 +25,4 @@ struct nng_sha1{
 
 struct nng_sha1 sha1;
 
-#endif // Z_NNG_SHA1_H
+#endif //_SHA1_H
