@@ -2,7 +2,7 @@
 
 name=`zj`
 mark=`cat ${ZJ_PATH}/mark`
-path=$ZJ_PATH/bin
+path=$HOME
 
 source_files=`find ${ZJ_PATH}/src -type f -name '*.c' | grep -v '_test.c'`
 

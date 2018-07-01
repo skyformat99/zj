@@ -1,5 +1,5 @@
-#ifndef HTTPCLI_H
-#define HTTPCLI_H
+#ifndef _HTTPCLI_H
+#define _HTTPCLI_H
 
 #include <sys/types.h>
 #include "utils.h"
@@ -10,4 +10,4 @@ struct http_cli{
     error_t * (*req) (const char *, const char *, source_t *, _i *);
 };
 
-#endif //HTTPCLI_H
+#endif //_HTTPCLI_H

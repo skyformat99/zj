@@ -1,5 +1,5 @@
-#ifndef SSH_H
-#define SSH_H
+#ifndef _SSH_H
+#define _SSH_H
 
 #include "libssh/callbacks.h"
 
@@ -12,4 +12,4 @@ struct ssh{
 
 struct ssh ssh;
 
-#endif
+#endif //_SSH_H

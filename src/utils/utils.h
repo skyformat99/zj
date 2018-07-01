@@ -1,5 +1,5 @@
-#ifndef UTILS_H
-#define UTILS_H
+#ifndef _UTILS_H
+#define _UTILS_H
 
 #include "env.h"
 
@@ -200,4 +200,4 @@ struct error_t{
     sigaction(SIGIOT, &sa, nil);\
     sigaction(SIGIO, &sa, nil);\
 }
-#endif //UTILS_H
+#endif //_UTILS_H

@@ -1,5 +1,5 @@
-#ifndef BUS_H
-#define BUS_H
+#ifndef _BUS_H
+#define _BUS_H
 
 #include "nng/nng.h"
 #include "nng/protocol/bus0/bus.h"
@@ -16,4 +16,4 @@ struct bus{
 
 struct bus bus;
 
-#endif //BUS_H
+#endif //_BUS_H
