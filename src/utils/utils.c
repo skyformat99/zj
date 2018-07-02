@@ -10,7 +10,7 @@
 #include "nng/nng.h"
 #include "nng/supplemental/util/platform.h"
 
-inline static _i ncpus(void);
+static void ncpu(_i *n) __prm_nonnull;
 
 static void print_time(void);
 static void info(const char *msg, const char *const file, const _i line, const char *const func);
@@ -27,7 +27,7 @@ static void *must_alloc(size_t siz, const char *const file, const _i line, const
 static void *must_ralloc(void *orig, size_t newsiz, const char *const file, const _i line, const char *const func);
 
 struct utils utils = {
-    .ncpus = ncpus,
+    .ncpu = ncpu,
     .info = info,
     .fatal = fatal,
     .display_errchain = display_errchain,
@@ -42,9 +42,9 @@ struct utils utils = {
     .ralloc = must_ralloc,
 };
 
-inline static _i
-ncpus(void){
-    return sysconf(_SC_NPROCESSORS_ONLN);
+static void
+ncpu(_i *n){
+    *n = sysconf(_SC_NPROCESSORS_ONLN);
 }
 
 inline static void

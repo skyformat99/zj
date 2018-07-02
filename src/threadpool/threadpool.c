@@ -32,9 +32,7 @@ static pthread_t tid;
 
 __init static void
 pool_init(void){
-    if(8 > (pool_siz = utils.ncpus())){
-        pool_siz = 8;
-    }
+    utils.ncpu(&pool_siz);
 
     pthread_mutexattr_t zMutexAttr;
 

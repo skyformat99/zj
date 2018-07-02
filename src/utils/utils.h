@@ -50,16 +50,17 @@ typedef struct source_t{
 }source_t;
 
 struct utils{
-    _i (*ncpus) (void);
-    void (*info) (const char *msg, const char * const file, const _i line, const char *const func);
-    void (*fatal) (const char *msg, const char * const file, const _i line, const char *const func); 
+    void (*ncpu) (_i *);
+
+    void (*info) (const char *, const char * const, const _i, const char *const);
+    void (*fatal) (const char *, const char * const, const _i, const char *const);
     void (*display_errchain) (error_t *, const char * const, const _i, const char *const);
 
     void (*msleep) (_i);
     _ui (*urand) (void);
-    void (*nng_drop) (source_t *) __prm_nonnull;
-    void (*sys_drop) (source_t *) __prm_nonnull;
-    void (*non_drop) (source_t *) __prm_nonnull;
+    void (*nng_drop) (source_t *);
+    void (*sys_drop) (source_t *);
+    void (*non_drop) (source_t *);
 
     void* (*alloc) (size_t, const char * const, const _i, const char *const);
     void * (*ralloc)(void *, size_t, const char * const, const _i, const char *const);
