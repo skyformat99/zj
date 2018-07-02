@@ -5,10 +5,15 @@
 #include <ftw.h>
 
 #include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/un.h>
 #include <sys/socket.h>
 #include <netdb.h>
+
+#ifdef _OS_FREEBSD
+#include <netinet/in.h>
+#endif
+
+#include <sys/stat.h>
+#include <sys/un.h>
 
 #include <stdio.h>
 #include <stdlib.h>
