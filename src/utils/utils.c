@@ -11,7 +11,7 @@
 #include "nng/nng.h"
 #include "nng/supplemental/util/platform.h"
 
-inline static void ncpu(_i *n) __prm_nonnull;
+static void ncpu(_i *n) __prm_nonnull;
 
 static void print_time(void);
 static void info(const char *msg, const char *const file, const _i line, const char *const func);
@@ -43,7 +43,7 @@ struct utils utils = {
     .ralloc = must_ralloc,
 };
 
-inline static void
+static void
 ncpu(_i *n){
     size_t siz;
     if(0 > sysctlbyname("hw.ncpu", n, &siz, nil, 0)){
