@@ -8,10 +8,6 @@
 #include <sys/socket.h>
 #include <netdb.h>
 
-#ifdef _OS_FREEBSD
-#include <netinet/in.h>
-#endif
-
 #include <sys/stat.h>
 #include <sys/un.h>
 

@@ -7,10 +7,6 @@
 #include <unistd.h>
 #include <stdlib.h>
 
-#ifdef _OS_FREEBSD
-#include <malloc_np.h>
-#endif
-
 #include "nng/nng.h"
 #include "nng/supplemental/util/platform.h"
 
@@ -48,11 +44,7 @@ struct utils utils = {
 
 inline static _i
 ncpus(void){
-#ifdef _OS_LINUX
     return sysconf(_SC_NPROCESSORS_ONLN);
-#else
-    return 8;
-#endif
 }
 
 inline static void

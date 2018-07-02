@@ -3,11 +3,6 @@
 
 #include "env.h"
 
-#ifdef _OS_FREEBSD
-//MUST define it before any stdio.h
-#define _WITH_DPRINTF
-#else
-
 #ifndef _XOPEN_SOURCE
 #define _XOPEN_SOURCE 700
 #endif
