@@ -17,18 +17,18 @@
 inline static _i ncpus(void);
 
 static void print_time(void);
-static void info(const char *msg, const char * const file, const _i line, const char *const func);
-static void fatal(const char *msg, const char * const file, const _i line, const char *const func);
-static void display_errchain(error_t *e, const char * const file, const _i line, const char *const func);
+static void info(const char *msg, const char *const file, const _i line, const char *const func);
+static void fatal(const char *msg, const char *const file, const _i line, const char *const func);
+static void display_errchain(error_t *e, const char *const file, const _i line, const char *const func);
 
 inline static void msleep(_i ms);
 inline static _ui urand(void);
-static void nng_drop(source_t *s);
-static void sys_drop(source_t *s);
-static void non_drop(source_t *s);
+static void nng_drop(source_t *restrict s);
+static void sys_drop(source_t *restrict s);
+static void non_drop(source_t *restrict s);
 
-static void *must_alloc(size_t siz, const char * const file, const _i line, const char *const func);
-static void * must_realloc(void *orig, size_t newsiz, const char * const file, const _i line, const char *const func);
+static void *must_alloc(size_t siz, const char *const file, const _i line, const char *const func);
+static void *must_realloc(void *orig, size_t newsiz, const char *const file, const _i line, const char *const func);
 
 struct utils utils = {
     .ncpus = ncpus,
@@ -66,26 +66,27 @@ urand(void){
 }
 
 static void
-nng_drop(source_t *s){
+nng_drop(source_t *restrict s){
     if(nil != s && nil != s->data){
         nng_free(s->data, s->dsiz);
     }
 }
 
 static void
-sys_drop(source_t *s){
+sys_drop(source_t *restrict s){
     if(nil != s && nil != s->data){
          free(s->data);
     }
 }
 
 static void
-non_drop(source_t *s){
+non_drop(source_t *restrict s){
     (void)s;
 }
 
 static void *
-must_alloc(size_t siz, const char * const file, const _i line, const char *const func){
+must_alloc(size_t siz,
+        const char *const file, const _i line, const char *const func){
     void *p = malloc(siz);
     if(nil == p){
         fatal("the fucking world is over!!!!", file, line, func);
@@ -94,7 +95,8 @@ must_alloc(size_t siz, const char * const file, const _i line, const char *const
 }
 
 static void *
-must_realloc(void *orig, size_t newsiz, const char * const file, const _i line, const char *const func){
+must_realloc(void *orig, size_t newsiz,
+        const char *const file, const _i line, const char *const func){
     void *p = realloc(orig, newsiz);
     if(nil == p){
         fatal("the fucking world is over!!!!", file, line, func);
@@ -165,7 +167,7 @@ print_time(void){
 }
 
 static void
-info(const char *msg, const char * const file, const _i line, const char *const func){
+info(const char *msg, const char *const file, const _i line, const char *const func){
     pthread_mutex_lock(&loglock); logrotate();
     print_time();
     dprintf(logfd, "\x1b[01mINFO:\x1b[00m %s\n"
@@ -180,7 +182,7 @@ info(const char *msg, const char * const file, const _i line, const char *const 
 }
 
 static void
-fatal(const char *msg, const char * const file, const _i line, const char *const func){
+fatal(const char *msg, const char *const file, const _i line, const char *const func){
     pthread_mutex_lock(&loglock); logrotate();
     print_time();
     dprintf(logfd, "\x1b[31;01mFATAL:\x1b[00m %s\n"
@@ -197,7 +199,7 @@ fatal(const char *msg, const char * const file, const _i line, const char *const
 }
 
 static void
-display_errchain(error_t *e, const char * const file, const _i line, const char *const func){
+display_errchain(error_t *e, const char *const file, const _i line, const char *const func){
     time_t ts = time(nil);
     struct tm *now = localtime(&ts);
 

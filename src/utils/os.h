@@ -2,6 +2,7 @@
 #define _OS_H
 
 #include "utils.h"
+#include <sys/uio.h>
 
 struct os{
     void (*daemonize) (const char *);
@@ -17,6 +18,11 @@ struct os{
     error_t * (*listen) (_i);
 
     error_t *(*connect) (const char *, const char *, _i *);
+
+    error_t *(*send) (_i, void *, size_t);
+    error_t *(*sendmsg) (_i, struct iovec *, size_t);
+    error_t *(*recv) (_i, void *, size_t);
+    error_t *(*recvall) (_i, void *, size_t);
 };
 
 struct os os;

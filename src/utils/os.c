@@ -8,7 +8,6 @@
 #include <sys/stat.h>
 #include <sys/un.h>
 #include <sys/socket.h>
-//#include <arpa/inet.h>
 #include <netdb.h>
 
 #include <stdio.h>
@@ -36,16 +35,21 @@
 static void daemonize(const char *runpath);
 static error_t *remove_all(char *path);
 
-static error_t * set_nonblocking(_i fd);
-static error_t * set_blocking(_i fd);
+static error_t *set_nonblocking(_i fd);
+static error_t *set_blocking(_i fd);
 
-static error_t * socket_new(const char *addr, const char *port, _i *fd);
-static error_t * ip_socket_new(const char *addr, const char *port, _i *fd) __prm_nonnull;
-static error_t * unix_socket_new(const char *path, _i *fd) __prm_nonnull;
+static error_t *socket_new(const char *addr, const char *port, _i *fd);
+static error_t *ip_socket_new(const char *addr, const char *port, _i *fd) __prm_nonnull;
+static error_t *unix_socket_new(const char *path, _i *fd) __prm_nonnull;
 
-static error_t * serv_listen(_i fd);
+inline static error_t *serv_listen(_i fd);
 
-static error_t * cli_connect(const char *addr, const char *port, _i *fd);
+static error_t *cli_connect(const char *addr, const char *port, _i *fd);
+
+inline static error_t *_send(_i fd, void *data, size_t data_siz);
+inline static error_t *connected_sendmsg(_i fd, struct iovec *vec, size_t vec_cnt);
+inline static error_t *_recv(_i fd, void *data, size_t data_siz);
+inline static error_t *recvall(_i fd, void *data, size_t data_siz);
 
 struct os os = {
     .daemonize = daemonize,
@@ -59,6 +63,11 @@ struct os os = {
     .unix_socket_new = unix_socket_new,
 
     .connect = cli_connect,
+
+    .send = _send,
+    .sendmsg = connected_sendmsg,
+    .recv = _recv,
+    .recvall = recvall,
 };
 
 /**
@@ -107,13 +116,13 @@ remove_all_ctw_cb(const char *path, const struct stat *stat __unuse,
         int file_type, struct FTW *zpF __unuse){
     _i rv = 0;
 
-    if (FTW_F == file_type || FTW_SL == file_type || FTW_SLN == file_type) {
-        if (0 != unlink(path)) {
+    if (FTW_F == file_type || FTW_SL == file_type || FTW_SLN == file_type){
+        if (0 != unlink(path)){
             __info(path);
             rv = -1;
         }
-    } else if (FTW_DP == file_type) {
-        if (0 != rmdir(path)) {
+    } else if (FTW_DP == file_type){
+        if (0 != rmdir(path)){
             __info(path);
             rv = -1;
         }
@@ -125,7 +134,7 @@ remove_all_ctw_cb(const char *path, const struct stat *stat __unuse,
 }
 
 static error_t *
-remove_all(char *path) {
+remove_all(char *path){
     if(0 != nftw(path, remove_all_ctw_cb, 128, FTW_PHYS/*ignore symlink*/|FTW_DEPTH/*file first*/)){
         return __err_new_sys();
     }
@@ -139,7 +148,7 @@ remove_all(char *path) {
 //**used on server and client side**
 //@param fd[in]: socket fd
 static error_t *
-set_nonblocking(_i fd) {
+set_nonblocking(_i fd){
     _i opt;
     if(0 > (opt = fcntl(fd, F_GETFL))){
         return __err_new_sys();
@@ -156,7 +165,7 @@ set_nonblocking(_i fd) {
 //**used on server and client side**
 //@param fd[in]: socket fd
 static error_t *
-set_blocking(_i fd) {
+set_blocking(_i fd){
     _i opt;
     if(0 > (opt = fcntl(fd, F_GETFL))){
         return __err_new_sys();
@@ -174,14 +183,14 @@ set_blocking(_i fd) {
  * Socket
  */
 static void
-addrinfo_drop(struct addrinfo **ais){
+addrinfo_drop(struct addrinfo **restrict ais){
     if(nil != ais && nil != *ais){
         freeaddrinfo(*ais);
     }
 }
 
 //@param fd[in]:
-static error_t *
+inline static error_t *
 serv_listen(_i fd){
     if(0 >listen(fd, 6)){
         return __err_new(-1, "socket listen failed", nil);
@@ -231,12 +240,12 @@ ip_socket_new(const char *addr, const char *port, _i *fd){
     struct addrinfo *ai;
     _i rv;
 
-    if (0 != (rv = getaddrinfo(addr, port, &hints_, &ais))) {
+    if (0 != (rv = getaddrinfo(addr, port, &hints_, &ais))){
         return __err_new(rv, gai_strerror(rv), nil);
     }
 
-    for (ai = ais; nil != ai; ai = ai->ai_next) {
-        if(0 < (*fd = socket( ai->ai_family, hints_.ai_socktype, hints_.ai_protocol))) {
+    for (ai = ais; nil != ai; ai = ai->ai_next){
+        if(0 < (*fd = socket( ai->ai_family, hints_.ai_socktype, hints_.ai_protocol))){
             break;
         }
     }
@@ -294,20 +303,20 @@ unix_socket_new(const char *path, _i *fd){
 #define __do_connect(__sockaddr, __siz) ({\
     error_t *e = nil;\
     if(nil == (e = set_nonblocking(*fd))){\
-        if (0 == connect(*fd, __sockaddr, __siz)) {\
+        if (0 == connect(*fd, __sockaddr, __siz)){\
             if(nil != (e = set_blocking(*fd))){\
                 close(*fd);\
                 e = __err_new(-1, "socket: set_blocking failed", e);\
             }\
         } else {\
-            if (EINPROGRESS == errno) {\
+            if (EINPROGRESS == errno){\
                 struct pollfd ev = {\
                     .fd = *fd,\
                     .events = POLLIN|POLLOUT,\
                     .revents = -1,\
                 };\
 \
-                if (0 < poll(&ev, 1, 8 * 1000)) {\
+                if (0 < poll(&ev, 1, 8 * 1000)){\
                     if(nil != (e = set_blocking(*fd))){\
                         close(*fd);\
                         e = __err_new(-1, "socket: set_blocking failed", e);\
@@ -330,7 +339,7 @@ unix_socket_new(const char *path, _i *fd){
 //@param port[in]: serv port
 //@param fd[in and out]: [in] used as bit mark, [out]: connected fd
 static error_t *
-cli_connect(const char *addr, const char *port, _i *fd) {
+cli_connect(const char *addr, const char *port, _i *fd){
     if(!(addr && fd)){
         return __err_new(-1, "param<addr, fd> can't be nil", nil);
     }
@@ -338,7 +347,7 @@ cli_connect(const char *addr, const char *port, _i *fd) {
     _i rv;
     error_t *e = nil;
 
-    if (__check_bit(*fd, _UNIX_SOCKET_BIT_IDX)) {
+    if (__check_bit(*fd, _UNIX_SOCKET_BIT_IDX)){
         struct sockaddr_un un = {
             .sun_family = AF_UNIX,
         };
@@ -370,121 +379,51 @@ cli_connect(const char *addr, const char *port, _i *fd) {
     return nil;
 }
 
-//static _i
-//zsendto(_i zSd, void *zpBuf, size_t zLen,
-//        struct sockaddr *zpAddr_, socklen_t zAddrSiz) {
-//    return sendto(zSd, zpBuf, zLen,
-//            MSG_NOSIGNAL,
-//            zpAddr_, zAddrSiz);
-//}
-//
-//
-//static _i
-//zsend(_i zSd, void *zpBuf, size_t zLen) {
-//    return send(zSd, zpBuf, zLen, MSG_NOSIGNAL);
-//}
+inline static error_t *
+_send(_i fd, void *data, size_t data_siz){
+    if(0 > send(fd, data, data_siz, 0)){
+        return __err_new_sys();
+    }
 
+    return nil;
+}
 
-//static _i
-//zsendmsg(_i zSd, struct iovec *zpVec_, size_t zVecSiz,
-//        struct sockaddr *zpAddr_, socklen_t zAddrSiz) {
-//    struct msghdr zMsg_ = {
-//        .msg_name = zpAddr_,
-//        .msg_namelen = zAddrSiz,
-//        .msg_iov = zpVec_,
-//        .msg_iovlen = zVecSiz,
-//        .msg_control = nil,
-//        .msg_controllen = 0,
-//        .msg_flags = 0
-//    };
-//
-//    return sendmsg(zSd, &zMsg_, MSG_NOSIGNAL);
-//}
+inline static error_t *
+connected_sendmsg(_i fd, struct iovec *vec, size_t vec_cnt){
+    struct msghdr msg = {
+        .msg_name = nil,
+        .msg_namelen = 0,
+        .msg_iov = vec,
+        .msg_iovlen = vec_cnt,
+        .msg_control = nil,
+        .msg_controllen = 0,
+        .msg_flags = 0
+    };
 
+    if(0 > sendmsg(fd, &msg, 0)){
+        return __err_new_sys();
+    }
 
-//static _i
-//zrecv_all(_i zSd, void *zpBuf, size_t zLen, struct sockaddr *zpAddr_, socklen_t *zpAddrSiz) {
-//    return recvfrom(zSd, zpBuf, zLen, MSG_WAITALL|MSG_NOSIGNAL, zpAddr_, zpAddrSiz);
-//}
-//
-//
-//// static _i
-//// zrecv_nohang(_i zSd, void *zpBuf, size_t zLen, struct sockaddr *zpAddr_, socklen_t *zpAddrSiz) {
-////     return recvfrom(zSd, zpBuf, zLen, MSG_DONTWAIT|MSG_NOSIGNAL, zpAddr_, zpAddrSiz);
-//// }
+    return nil;
+}
 
+inline static error_t *
+_recv(_i fd, void *data, size_t data_siz){
+    if(0 > recv(fd, data, data_siz, 0)){
+        return __err_new_sys();
+    }
 
-///*
-// * 将文本格式的ip地址转换成二进制无符号整型数组(按网络字节序，即大端字节序)，以及反向转换
-// * inet_pton: 返回 1 表示成功，返回 0 表示指定的地址无效，返回 -1 表示指定的ip类型错误
-// */
-//static _i
-//zconvert_ip_str_to_bin(const char *zpStrAddr, zip_t zIpType, _ull *zpResOUT/* _ull[2] */) {
-//    _i zErrNo = -1;
-//
-//    if (zIPTypeV6 == zIpType) {
-//        struct in6_addr zIp6Addr_ = {{{0}}};
-//
-//        if (1 == inet_pton(AF_INET6, zpStrAddr, &zIp6Addr_)) {
-//            zpResOUT[0] = * ((_ull *) (zIp6Addr_.__in6_u.__u6_addr8) + 1);
-//            zpResOUT[1] = * ((_ull *) (zIp6Addr_.__in6_u.__u6_addr8) + 0);
-//
-//            zErrNo = 0;
-//        }
-//    } else {
-//        struct in_addr zIpAddr_ = {0};
-//
-//        if (1 == inet_pton(AF_INET, zpStrAddr, &zIpAddr_)) {
-//            zpResOUT[0] = zIpAddr_.s_addr;
-//            zpResOUT[1] = 0xff;  /* 置为 "FF00::"，IPV6 组播地址*/
-//
-//            zErrNo = 0;
-//        }
-//    }
-//
-//    return zErrNo;
-//}
+    return nil;
+}
 
+inline static error_t *
+recvall(_i fd, void *data, size_t data_siz){
+    if(0 > recv(fd, data, data_siz, MSG_WAITALL)){
+        return __err_new_sys();
+    }
 
-//static _i
-//zconvert_ip_bin_to_str(_ull *zpIpNumeric/* _ull[2] */, zip_t zIpType, char *zpResOUT/* char[INET6_ADDRSTRLEN] */) {
-//    _i zErrNo = -1;
-//
-//    if (zIpType == zIPTypeV6) {
-//        struct in6_addr zIpAddr_ = {{{0}}};
-//        _uc *zp = (_uc *) zpIpNumeric;
-//
-//        zIpAddr_.__in6_u.__u6_addr8[0] = * (zp + 8);
-//        zIpAddr_.__in6_u.__u6_addr8[1] = * (zp + 9);
-//        zIpAddr_.__in6_u.__u6_addr8[2] = * (zp + 10);
-//        zIpAddr_.__in6_u.__u6_addr8[3] = * (zp + 11);
-//        zIpAddr_.__in6_u.__u6_addr8[4] = * (zp + 12);
-//        zIpAddr_.__in6_u.__u6_addr8[5] = * (zp + 13);
-//        zIpAddr_.__in6_u.__u6_addr8[6] = * (zp + 14);
-//        zIpAddr_.__in6_u.__u6_addr8[7] = * (zp + 15);
-//
-//        zIpAddr_.__in6_u.__u6_addr8[8] = * (zp + 0);
-//        zIpAddr_.__in6_u.__u6_addr8[9] = * (zp + 1);
-//        zIpAddr_.__in6_u.__u6_addr8[10] = * (zp + 2);
-//        zIpAddr_.__in6_u.__u6_addr8[11] = * (zp + 3);
-//        zIpAddr_.__in6_u.__u6_addr8[12] = * (zp + 4);
-//        zIpAddr_.__in6_u.__u6_addr8[13] = * (zp + 5);
-//        zIpAddr_.__in6_u.__u6_addr8[14] = * (zp + 6);
-//        zIpAddr_.__in6_u.__u6_addr8[15] = * (zp + 7);
-//
-//        if (nil != inet_ntop(AF_INET6, &zIpAddr_, zpResOUT, INET6_ADDRSTRLEN)) {
-//            zErrNo = 0;  /* 转换成功 */
-//        }
-//    } else {
-//        struct in_addr zIpAddr_ = { .s_addr =  zpIpNumeric[0] };
-//        if (nil != inet_ntop(AF_INET, &zIpAddr_, zpResOUT, INET_ADDRSTRLEN)) {
-//            zErrNo = 0;  /* 转换成功 */
-//        }
-//    }
-//
-//    return zErrNo;
-//}
-
+    return nil;
+}
 
 ///*
 // * 进程间传递文件描述符
@@ -496,7 +435,7 @@ cli_connect(const char *addr, const char *port, _i *fd) {
 // * 若使用 UDP 通信，则必须事先完成了 connect
 // */
 //static _i
-//zsend_fd(const _i zUN, const _i zFd, void *zpPeerAddr, _i zAddrSiz) {
+//zsend_fd(const _i zUN, const _i zFd, void *zpPeerAddr, _i zAddrSiz){
 //    /*
 //     * 法1:可以只发送一个字节的常规数据，与连接连开区分
 //     * 用于判断 sendmsg 的执行结果
@@ -564,8 +503,8 @@ cli_connect(const char *addr, const char *port, _i *fd) {
 //    /*
 //     * 成功发送了 1/0 个字节的数据，即说明执行成功
 //     */
-//    //if (1 == sendmsg(zUN, &zMsg_, MSG_NOSIGNAL)) {
-//    if (0 == sendmsg(zUN, &zMsg_, MSG_NOSIGNAL)) {
+//    //if (1 == sendmsg(zUN, &zMsg_, MSG_NOSIGNAL)){
+//    if (0 == sendmsg(zUN, &zMsg_, MSG_NOSIGNAL)){
 //        return 0;
 //    } else {
 //        return -1;
@@ -580,7 +519,7 @@ cli_connect(const char *addr, const char *port, _i *fd) {
 // * 若使用 UDP 通信，则必须事先完成了 connect
 // */
 //static _i
-//zrecv_fd(const _i zFd) {
+//zrecv_fd(const _i zFd){
 //    char _;
 //    struct iovec zVec_ = {
 //        .iov_base = &_,
@@ -608,8 +547,8 @@ cli_connect(const char *addr, const char *port, _i *fd) {
 //    /*
 //     * zsend_fd() 只发送了一个字节的常规数据
 //     */
-//    if (1 == recvmsg(zFd, &zMsg_, 0)) {
-//        if (nil == CMSG_FIRSTHDR(&zMsg_)) {
+//    if (1 == recvmsg(zFd, &zMsg_, 0)){
+//        if (nil == CMSG_FIRSTHDR(&zMsg_)){
 //            return -1;
 //        } else {
 //            /*
