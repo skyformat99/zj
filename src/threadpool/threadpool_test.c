@@ -198,7 +198,7 @@ main(void){
     preasure_32k_jobs();
     preasure_64k_jobs();
     preasure_128k_jobs();
-    preasure_256k_jobs();
-    preasure_512k_jobs();
-    preasure_1024k_jobs();
+    //preasure_256k_jobs();
+    //preasure_512k_jobs();
+    //preasure_1024k_jobs();
 }

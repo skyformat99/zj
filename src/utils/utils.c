@@ -46,6 +46,14 @@ struct utils utils = {
     .ralloc = must_ralloc,
 };
 
+//Only support FreeBSD(>=10.3) and Linux(>=3.10)
+#ifdef _OS_OTHER
+__init void
+panic(void){
+    __fatal("Unsupported OS platform!!!");
+}
+#endif
+
 static void
 ncpu(_i *n){
 #ifdef _OS_LINUX

@@ -4,12 +4,14 @@
 #include "env.h"
 
 #ifdef _OS_FREEBSD
-//MUST define it before any stdio.h
-#define _WITH_DPRINTF
-#else
+#define _WITH_DPRINTF //MUST define it before any stdio.h
+#endif
+
+#ifdef _OS_LINUX
 
 #ifndef _XOPEN_SOURCE
 #define _XOPEN_SOURCE 700
+#define _DEFAULT_SOURCE
 #endif
 
 #endif
