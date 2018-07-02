@@ -1,4 +1,5 @@
 #include "utils.h"
+#include "http_cli.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,11 +9,7 @@
 #include "nng/nng.h"
 #include "nng/supplemental/http/http.h"
 
-#include "http_cli.h"
-
-#ifdef _OS_FREEBSD
 #include <limits.h>
-#endif
 
 #define __http_req_max_body_siz 1 * 1024 * 1024 //1MB
 

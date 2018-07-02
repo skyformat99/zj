@@ -1,5 +1,4 @@
-#ifndef _OS_TARGET_H
-#define _OS_TARGET_H
-#define _OS_FREEBSD
+#ifndef _ENV_H
+#define _ENV_H
 #define _UNIT_TEST_USER "fh"
-#endif //_OS_TARGET_H
+#endif //_ENV_H
