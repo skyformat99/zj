@@ -3,6 +3,7 @@
 
 void
 rm_all(void){
+    error_t *e;
     _i fd;
     struct stat s;
 
@@ -20,8 +21,10 @@ rm_all(void){
     }
     close(fd);
 
-    os.rm_all("/tmp/_");
-    So(-1, stat("/tmp/_/a/b/c/file", &s));
+    if(nil != (e = os.rm_all("/tmp/_"))){
+        __display_errchain(e);
+    }
+    So(-1, stat("/tmp/_", &s));
     So(ENOENT, errno);
 }
 

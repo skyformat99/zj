@@ -7,7 +7,7 @@
 pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t mlock = PTHREAD_MUTEX_INITIALIZER;
 
-#define __threads_total 2000
+#define __threads_total 200
 _i cnter;
 
 static void *

@@ -1,11 +1,13 @@
 #include "utils.h"
 
+#include <unistd.h>
 #include <fcntl.h>
 #include <pthread.h>
 
 #include <stdio.h>
-#include <unistd.h>
 #include <stdlib.h>
+#include <string.h>
+#include <errno.h>
 
 #ifdef _OS_FREEBSD
 #include <malloc_np.h>
@@ -56,11 +58,10 @@ panic(void){
 
 static void
 ncpu(_i *n){
-#ifdef _OS_LINUX
-    *n = sysconf(_SC_NPROCESSORS_ONLN);
-#else
-    *n = 8;
-#endif
+    if(0 > (*n = sysconf(_SC_NPROCESSORS_ONLN))){
+        __info(strerror(errno));
+        *n = 8;
+    }
 }
 
 inline static void
