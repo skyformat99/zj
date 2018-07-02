@@ -101,10 +101,8 @@ _i
 main(void){
     many_threads_safe();
 
-#ifndef _OS_DARWIN
     success_without_output();
     fail_without_output();
     success_with_output();
     fail_with_output();
-#endif
 }

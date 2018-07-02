@@ -3,13 +3,15 @@
 
 #include "env.h"
 
-//#ifndef _XOPEN_SOURCE
-//#define _XOPEN_SOURCE 700
-//#endif
-
 #ifdef _OS_FREEBSD
 //MUST define it before any stdio.h
 #define _WITH_DPRINTF
+#else
+
+#ifndef _XOPEN_SOURCE
+#define _XOPEN_SOURCE 700
+#endif
+
 #endif
 
 #define __mustuse __attribute__ ((__warn_unused_result__));

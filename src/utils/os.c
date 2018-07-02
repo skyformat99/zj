@@ -29,11 +29,7 @@
 #define _UNIX_SOCKET_BIT_IDX 1
 #define _PROTO_UDP_BIT_IDX 2
 
-#ifdef _OS_LINUX
 #define _SO_REUSE SO_REUSEADDR|SO_REUSEPORT
-#else
-#define _SO_REUSE SO_REUSEADDR
-#endif
 
 #define __err_new_sys() __err_new(errno, strerror(errno), nil)
 
