@@ -1,8 +1,8 @@
+#include "utils.h"
+#include "bus.h"
+
 #include <stdio.h>
 #include <stdlib.h>
-
-#include "bus.h"
-#include "utils.h"
 
 static error_t * new(nng_socket *sock);
 static error_t * listen(const char *self_id, nng_socket *sock);

@@ -1,9 +1,8 @@
 #ifndef _SHA1_H
 #define _SHA1_H
 
-#include <stdint.h>
-#include <sys/types.h>
 #include "utils.h"
+#include <stdint.h>
 
 typedef struct {
     uint32_t digest[5]; // resulting digest

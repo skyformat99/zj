@@ -425,15 +425,15 @@ recvall(_i fd, void *data, size_t data_siz){
     return nil;
 }
 
-///*
-// * 进程间传递文件描述符
-// * 用于实现多进程模型服务器
-// * 每次只传送一个 fd
-// * @param: zUN 是 UNIX 域套接字，用作传输的工具
-// * @param: zFd 是需要被传递的目标 fd
-// * 返回 0 表示成功，否则表示失败
-// * 若使用 UDP 通信，则必须事先完成了 connect
-// */
+/*
+ * 进程间传递文件描述符
+ * 用于实现多进程模型服务器
+ * 每次只传送一个 fd
+ * @param: zUN 是 UNIX 域套接字，用作传输的工具
+ * @param: zFd 是需要被传递的目标 fd
+ * 返回 0 表示成功，否则表示失败
+ * 若使用 UDP 通信，则必须事先完成了 connect
+ */
 //static _i
 //zsend_fd(const _i zUN, const _i zFd, void *zpPeerAddr, _i zAddrSiz){
 //    /*

@@ -59,7 +59,7 @@ pool_init(void){
     stack_header = -1;
 
     /* 线程池栈结构空间 */
-    if(nil == (pool_stack = __malloc(sizeof(void *) * pool_siz))){
+    if(nil == (pool_stack = __alloc(sizeof(void *) * pool_siz))){
         __fatal(strerror(errno));
     }
 
@@ -110,7 +110,7 @@ meta_fn(void *_ __unuse){
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, 0);
 
     /* 线程任务桩 */
-    struct thread_task *self_task = __malloc(sizeof(struct thread_task));
+    struct thread_task *self_task = __alloc(sizeof(struct thread_task));
     if(nil == self_task){
         __fatal(strerror(errno));
     }

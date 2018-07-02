@@ -1,3 +1,5 @@
+#include "utils.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,7 +9,6 @@
 #include "nng/supplemental/http/http.h"
 
 #include "http_cli.h"
-#include "utils.h"
 
 #ifdef _OS_FREEBSD
 #include <limits.h>

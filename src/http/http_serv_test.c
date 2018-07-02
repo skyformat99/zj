@@ -15,7 +15,7 @@ body_add_one_worker(void *reqbody, size_t reqbody_siz __unuse, source_t *resp){
     errno = 0;
     _i v = strtol(reqbody, nil, 10);
     if (0 == errno){
-        resp->data = __malloc(16);
+        resp->data = __alloc(16);
         resp->dsiz = sprintf(resp->data, "%d", ++v);
         resp->drop = utils.sys_drop;
     } else {

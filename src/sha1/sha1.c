@@ -2,13 +2,13 @@
  * NOTE:
  * borrow from nng-1.0.0
  */
+#include "sha1.h"
+
 #include <stdio.h>
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
-
-#include "sha1.h"
 
 static void nng_sha1_init(nng_sha1_ctx *);
 static void nng_sha1_update(nng_sha1_ctx *, const void *, size_t);

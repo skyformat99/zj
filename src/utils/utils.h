@@ -7,6 +7,11 @@
 #define _XOPEN_SOURCE 700
 #endif
 
+#ifdef _OS_FREEBSD
+//MUST define it before any stdio.h
+#define _WITH_DPRINTF
+#endif
+
 #define __mustuse __attribute__ ((__warn_unused_result__));
 #define __pub __attribute__ ((visibility("default")))  // default to private(only available in *.so), when compile with `-fvisibility=hidden`
 
@@ -62,7 +67,7 @@ struct utils{
     void (*non_drop) (source_t *) __prm_nonnull;
 
     void* (*alloc) (size_t, const char * const, const _i, const char *const);
-    void * (*realloc)(void *, size_t, const char * const, const _i, const char *const);
+    void * (*ralloc)(void *, size_t, const char * const, const _i, const char *const);
 };
 
 //For Error Print
@@ -77,7 +82,7 @@ struct error_t{
 };
 
 #define __err_new(__code/*int*/, __desc/*str*/, __prev/*error_t_ptr*/) ({\
-    error_t *new = __malloc(sizeof(error_t));\
+    error_t *new = __alloc(sizeof(error_t));\
     new->code = (__code);\
     new->desc = (__desc);\
     new->cause = (__prev);\
@@ -152,12 +157,12 @@ struct error_t{
 /**
  * Memory Management
  */
-#define __malloc(__siz) ({\
+#define __alloc(__siz) ({\
     utils.alloc(__siz, __FILE__, __LINE__, __func__);\
 })
 
-#define __realloc(__orig, __newsiz) ({\
-    utils.realloc(__orig, __newsiz, __FILE__, __LINE__, __func__);\
+#define __ralloc(__orig, __newsiz) ({\
+    utils.ralloc(__orig, __newsiz, __FILE__, __LINE__, __func__);\
 })
 
 /**

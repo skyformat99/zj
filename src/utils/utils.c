@@ -28,7 +28,7 @@ static void sys_drop(source_t *restrict s);
 static void non_drop(source_t *restrict s);
 
 static void *must_alloc(size_t siz, const char *const file, const _i line, const char *const func);
-static void *must_realloc(void *orig, size_t newsiz, const char *const file, const _i line, const char *const func);
+static void *must_ralloc(void *orig, size_t newsiz, const char *const file, const _i line, const char *const func);
 
 struct utils utils = {
     .ncpus = ncpus,
@@ -43,7 +43,7 @@ struct utils utils = {
     .non_drop = non_drop,
 
     .alloc = must_alloc,
-    .realloc = must_realloc,
+    .ralloc = must_ralloc,
 };
 
 inline static _i
@@ -95,7 +95,7 @@ must_alloc(size_t siz,
 }
 
 static void *
-must_realloc(void *orig, size_t newsiz,
+must_ralloc(void *orig, size_t newsiz,
         const char *const file, const _i line, const char *const func){
     void *p = realloc(orig, newsiz);
     if(nil == p){

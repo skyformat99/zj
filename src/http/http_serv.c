@@ -1,9 +1,9 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-
-#include "http_serv.h"
 #include "utils.h"
+#include "http_serv.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 //will be registed by webserv modules' __init func...
 static struct http_serv server = {
@@ -70,13 +70,13 @@ http_serv_hdr_register(const char *path, void (*cb) (nng_aio *prm), const char *
 
     struct http_serv_hdr *p = server.hdr;
     if(nil == p){
-        p = __malloc(sizeof(struct http_serv_hdr));
+        p = __alloc(sizeof(struct http_serv_hdr));
         server.hdr = p;
     } else {
         while(nil != p->next){
             p = p->next;
         }
-        p->next = __malloc(sizeof(struct http_serv_hdr));
+        p->next = __alloc(sizeof(struct http_serv_hdr));
         p = p->next;
     }
     p->next = nil;

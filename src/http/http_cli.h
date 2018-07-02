@@ -1,7 +1,6 @@
 #ifndef _HTTPCLI_H
 #define _HTTPCLI_H
 
-#include <sys/types.h>
 #include "utils.h"
 
 struct http_cli{

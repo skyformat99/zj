@@ -1,9 +1,8 @@
 #ifndef _SSH_H
 #define _SSH_H
 
-#include "libssh/callbacks.h"
-
 #include "utils.h"
+#include "libssh/callbacks.h"
 
 struct ssh{
     error_t * (* exec)(char *, _i *, source_t *, char *, _i, char *, time_t) __mustuse;

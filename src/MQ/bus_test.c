@@ -137,7 +137,7 @@ main(void){
     }
 
     for(i = 0; i < __node_total; ++i){
-        struct bus_info *bi = __malloc(sizeof(struct bus_info));
+        struct bus_info *bi = __alloc(sizeof(struct bus_info));
         snprintf(bi->self_url, 64, "tcp://localhost:%d", 9001 + i);
         strcpy(bi->remote_url, leader_url);
 
