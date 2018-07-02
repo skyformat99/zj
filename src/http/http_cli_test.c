@@ -9,7 +9,7 @@ source_t s;
 _i status;
 
 #define __env__ {\
-    urlstr = "http://www.163.com";\
+    urlstr = "http://www.baidu.com";\
     s.data = "POST";\
     s.dsiz = sizeof("POST") - 1;\
     s.drop = nil;\

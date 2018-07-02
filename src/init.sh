@@ -20,6 +20,6 @@ else
     echo "#define _OS_OTHER">>./env.h
 fi
 
-echo "#define UNIT_TEST_USER \"`whoami`\"">>./env.h
+echo "#define _UNIT_TEST_USER \"`whoami`\"">>./env.h
 
 echo "#endif //_OS_TARGET_H">>./env.h

@@ -19,11 +19,17 @@
 #include <signal.h>
 #include <poll.h>
 
-#define __un_path_siz\
+#define _UN_PATH_SIZ\
         sizeof(struct sockaddr_un)-((size_t) (& ((struct sockaddr_un*) 0)->sun_path))
 
 #define _UNIX_SOCKET_BIT_IDX 1
 #define _PROTO_UDP_BIT_IDX 2
+
+#ifdef _OS_LINUX
+#define _SO_REUSE SO_REUSEADDR|SO_REUSEPORT
+#else
+#define _SO_REUSE SO_REUSEADDR
+#endif
 
 #define __err_new_sys() __err_new(errno, strerror(errno), nil)
 
@@ -239,7 +245,7 @@ ip_socket_new(const char *addr, const char *port, _i *fd){
         return __err_new(-1, "socket create failed", nil)
     }
 
-    if(0 > setsockopt(*fd, SOL_SOCKET, SO_REUSEADDR|SO_REUSEPORT, fd, sizeof(_i))){
+    if(0 > setsockopt(*fd, SOL_SOCKET, _SO_REUSE, fd, sizeof(_i))){
         close(*fd);
         return __err_new_sys()
     }
@@ -259,16 +265,16 @@ ip_socket_new(const char *addr, const char *port, _i *fd){
 static error_t *
 unix_socket_new(const char *path, _i *fd){
     struct sockaddr_un un = {
-        .sun_family = PF_UNIX,
+        .sun_family = AF_UNIX,
     };
-    snprintf(un.sun_path, __un_path_siz, "%s", path);
+    snprintf(un.sun_path, _UN_PATH_SIZ, "%s", path);
 
-    if(0 > (*fd = socket(PF_UNIX, __check_bit(*fd, _PROTO_UDP_BIT_IDX) ? SOCK_DGRAM : SOCK_STREAM, 0))){
+    if(0 > (*fd = socket(AF_UNIX, __check_bit(*fd, _PROTO_UDP_BIT_IDX) ? SOCK_DGRAM : SOCK_STREAM, 0))){
         *fd = -1;
         return __err_new_sys();
     }
 
-    if(0 > setsockopt(*fd, SOL_SOCKET, SO_REUSEADDR|SO_REUSEPORT, fd, sizeof(_i))){
+    if(0 > setsockopt(*fd, SOL_SOCKET, _SO_REUSE, fd, sizeof(_i))){
         close(*fd);
         *fd = -1;
         return __err_new_sys();
@@ -334,9 +340,9 @@ cli_connect(const char *addr, const char *port, _i *fd) {
 
     if (__check_bit(*fd, _UNIX_SOCKET_BIT_IDX)) {
         struct sockaddr_un un = {
-            .sun_family = PF_UNIX,
+            .sun_family = AF_UNIX,
         };
-        snprintf(un.sun_path, __un_path_siz, "%s", addr);
+        snprintf(un.sun_path, _UN_PATH_SIZ, "%s", addr);
 
         if(nil != (e = __do_connect((struct sockaddr *)&un, sizeof(struct sockaddr_un)))){
             return e;
@@ -617,5 +623,5 @@ cli_connect(const char *addr, const char *port, _i *fd) {
 //    }
 //}
 
-#undef __un_path_siz
+#undef _UN_PATH_SIZ
 #undef __err_new_sys

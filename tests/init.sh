@@ -3,6 +3,7 @@
 sed -i.bak '/export ZJ_PATH=/d' ~/.bashrc
 sed -i.bak '/export LD_LIBRARY_PATH=/d' ~/.bashrc
 
+echo "export LC_ALL=en_US.UTF-8" >> ~/.bashrc
 echo "export ZJ_PATH=${HOME}/zj" >> ~/.bashrc
 
 perl -ane 'print "$F[1]:" if /^-L/' ${HOME}/zj/ccpath >/tmp/__z__ldpath

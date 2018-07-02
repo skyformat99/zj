@@ -13,7 +13,7 @@ _i cnter;
 static void *
 thread_safe_checker(void *_ __unuse){
     //async return, unless we waiting exit_status...
-    error_t *e = ssh.exec("sleep 20", nil, nil, "localhost", 22, UNIT_TEST_USER, 10);
+    error_t *e = ssh.exec("sleep 20", nil, nil, "localhost", 22, _UNIT_TEST_USER, 10);
     __clean_errchain(e);
 
     pthread_mutex_lock(&mlock);
@@ -55,7 +55,7 @@ many_threads_safe(void){
 
 void
 success_without_output(void){
-    e = ssh.exec("ls", &exit_status, nil, "localhost", 22, UNIT_TEST_USER, 3);
+    e = ssh.exec("ls", &exit_status, nil, "localhost", 22, _UNIT_TEST_USER, 3);
     if(nil, e) {
         __display_and_clean(e);
     }
@@ -64,7 +64,7 @@ success_without_output(void){
 
 void
 fail_without_output(void){
-    e = ssh.exec("ls /root/|", &exit_status, nil, "localhost", 22, UNIT_TEST_USER, 3);
+    e = ssh.exec("ls /root/|", &exit_status, nil, "localhost", 22, _UNIT_TEST_USER, 3);
     if(nil, e) {
         __display_and_clean(e);
     }
@@ -73,7 +73,7 @@ fail_without_output(void){
 
 void
 success_with_output(void){
-    e = ssh.exec("ls", &exit_status, &cmdout, "localhost", 22, UNIT_TEST_USER, 3);
+    e = ssh.exec("ls", &exit_status, &cmdout, "localhost", 22, _UNIT_TEST_USER, 3);
     if(nil, e) {
         __display_and_clean(e);
     }
@@ -86,7 +86,7 @@ success_with_output(void){
 
 void
 fail_with_output(void){
-    e = ssh.exec("ls /root/|", &exit_status, &cmdout, "localhost", 22, UNIT_TEST_USER, 3);
+    e = ssh.exec("ls /root/|", &exit_status, &cmdout, "localhost", 22, _UNIT_TEST_USER, 3);
     if(nil, e) {
         __display_and_clean(e);
     }
