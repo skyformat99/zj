@@ -15,10 +15,15 @@ if [[ 0 -ne $? ]]; then
     exit 1
 fi
 
+sysld_path="-lpthread"
+if [[ 0 -lt `uname -r|grep -c '^2.6.'` ]]; then
+    sysld_path="-lpthread -lrt"
+fi
+
 # **** #
-eval cc -g ${name}.c `cat ${ZJ_PATH}/ccpath` -o ${path}/${name}\
+eval clang -g ${name}.c `cat ${ZJ_PATH}/ccpath` -o ${path}/${name}\
     "`perl -ane 'print "$F[1]" if /^-L.*nng/' ${ZJ_PATH}/ccpath | head -1`/libnng.a"\
-    -lssh -lssh_threads -lpthread
+    -lssh -lssh_threads ${sysld_path}
 
 if [[ 0 -ne $? ]]; then
     echo "cc failed"
