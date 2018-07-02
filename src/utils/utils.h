@@ -7,8 +7,6 @@
 #define _XOPEN_SOURCE 700
 #endif
 
-#endif
-
 #define __mustuse __attribute__ ((__warn_unused_result__));
 #define __pub __attribute__ ((visibility("default")))  // default to private(only available in *.so), when compile with `-fvisibility=hidden`
 
