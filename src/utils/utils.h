@@ -3,9 +3,9 @@
 
 #include "env.h"
 
-#ifndef _XOPEN_SOURCE
-#define _XOPEN_SOURCE 700
-#endif
+//#ifndef _XOPEN_SOURCE
+//#define _XOPEN_SOURCE 700
+//#endif
 
 #ifdef _OS_FREEBSD
 //MUST define it before any stdio.h
