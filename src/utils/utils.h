@@ -4,7 +4,7 @@
 #include "env.h"
 
 #ifdef _OS_FREEBSD
-#define _WITH_DPRINTF //MUST define it before any stdio.h
+#define _WITH_DPRINTF //MUST define it before all 'stdio.h'
 #endif
 
 #ifdef _OS_LINUX

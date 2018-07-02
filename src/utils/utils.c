@@ -50,7 +50,7 @@ struct utils utils = {
 #ifdef _OS_OTHER
 __init void
 panic(void){
-    __fatal("Unsupported OS platform!!!");
+    __fatal("Unsupported OS Platform!!!");
 }
 #endif
 
