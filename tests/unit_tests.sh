@@ -6,5 +6,5 @@ cd ../src
 curdir=`pwd`
 for unit in `find ${curdir} -name "*_test.sh"`; do
 	cd `dirname ${unit}`
-    $unit || exit 1
+    $unit
 done
