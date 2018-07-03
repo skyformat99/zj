@@ -159,6 +159,36 @@ struct error_t{
     }\
 }while(0)
 
+#define SoGt(__v1, __v2) do{\
+    if((__v1) > (__v2)){\
+        printf("\x1b[32;01mPass < %s -gt %s >\x1b[00m\tat: %s(), %s, %d\n",\
+                #__v1, #__v2, __func__, __FILE__, __LINE__);\
+    } else {\
+        printf("\x1b[33;01mFailed < %s -gt %s >: %lld -le %lld\x1b[00m\n"\
+                "\tfunc: %s\n"\
+                "\tfile: %s\n"\
+                "\tline: %d\n",\
+                #__v1, #__v2, (_lli)(__v1), (_lli)(__v2),\
+                __func__, __FILE__, __LINE__);\
+        exit(1);\
+    }\
+}while(0)
+
+#define SoLt(__v1, __v2) do{\
+    if((__v1) < (__v2)){\
+        printf("\x1b[32;01mPass < %s -lt %s >\x1b[00m\tat: %s(), %s, %d\n",\
+                #__v1, #__v2, __func__, __FILE__, __LINE__);\
+    } else {\
+        printf("\x1b[33;01mFailed < %s -lt %s >: %lld -ge %lld\x1b[00m\n"\
+                "\tfunc: %s\n"\
+                "\tfile: %s\n"\
+                "\tline: %d\n",\
+                #__v1, #__v2, (_lli)(__v1), (_lli)(__v2),\
+                __func__, __FILE__, __LINE__);\
+        exit(1);\
+    }\
+}while(0)
+
 /**
  * Memory Management
  */

@@ -26,8 +26,6 @@
 #define _UNIX_SOCKET_BIT_IDX 1
 #define _PROTO_UDP_BIT_IDX 2
 
-#define _SO_REUSE SO_REUSEADDR|SO_REUSEPORT
-
 #define __err_new_sys() __err_new(errno, strerror(errno), nil)
 
 static void daemonize(const char *runpath);
@@ -63,6 +61,8 @@ struct os os = {
     .socket_new = socket_new,
     .ip_socket_new = ip_socket_new,
     .unix_socket_new = unix_socket_new,
+
+    .listen = serv_listen,
 
     .connect = cli_connect,
 
@@ -216,7 +216,7 @@ socket_new(const char *addr, const char *port, _i *fd){
         return __err_new(-1, "param<addr, fd> can't be nil", nil);
     }
 
-    error_t *e;
+    error_t *e = nil;
 
     if(__check_bit(*fd, _UNIX_SOCKET_BIT_IDX)){
         e = unix_socket_new(addr, fd);
@@ -225,10 +225,10 @@ socket_new(const char *addr, const char *port, _i *fd){
     }
 
     if(nil != e){
-        return __err_new(-1, "socket create failed", e);
+        e = __err_new(-1, "socket create failed", e);
     }
 
-    return nil;
+    return e;
 }
 
 //**used on server side**
@@ -261,7 +261,7 @@ ip_socket_new(const char *addr, const char *port, _i *fd){
         return __err_new(-1, "socket create failed", nil)
     }
 
-    if(0 > setsockopt(*fd, SOL_SOCKET, _SO_REUSE, fd, sizeof(_i))){
+    if(0 > setsockopt(*fd, SOL_SOCKET, SO_REUSEPORT, fd, sizeof(_i))){
         close(*fd);
         return __err_new_sys()
     }
@@ -283,20 +283,21 @@ unix_socket_new(const char *path, _i *fd){
     struct sockaddr_un un = {
         .sun_family = AF_UNIX,
     };
-    snprintf(un.sun_path, _UN_PATH_SIZ, "%s", path);
+    un.sun_len = sizeof(un) - sizeof(un.sun_path);
+    un.sun_len += snprintf(un.sun_path, _UN_PATH_SIZ, "%s", path);
+    un.sun_len++; //'\0'
 
     if(0 > (*fd = socket(AF_UNIX, __check_bit(*fd, _PROTO_UDP_BIT_IDX) ? SOCK_DGRAM : SOCK_STREAM, 0))){
         *fd = -1;
         return __err_new_sys();
     }
 
-    if(0 > setsockopt(*fd, SOL_SOCKET, _SO_REUSE, fd, sizeof(_i))){
+    if(0 > setsockopt(*fd, SOL_SOCKET, SO_REUSEADDR, fd, sizeof(_i))){
         close(*fd);
-        *fd = -1;
-        return __err_new_sys();
+        return __err_new_sys()
     }
 
-    if(0 > bind(*fd, (struct sockaddr *) &un, sizeof(struct sockaddr_un))){
+    if(0 > bind(*fd, (struct sockaddr *) &un, un.sun_len)){
         close(*fd);
         *fd = -1;
         return __err_new_sys();
@@ -307,39 +308,41 @@ unix_socket_new(const char *path, _i *fd){
 
 // timeout: 8000ms(8 secs)
 // poll return: 0 for timeout, 1 for success, -1 for error
-#define __do_connect(__sockaddr, __siz) ({\
-    error_t *e = nil;\
-    if(nil == (e = set_nonblocking(*fd))){\
-        if (0 == connect(*fd, __sockaddr, __siz)){\
-            if(nil != (e = set_blocking(*fd))){\
-                close(*fd);\
-                e = __err_new(-1, "socket: set_blocking failed", e);\
-            }\
-        } else {\
-            if (EINPROGRESS == errno){\
-                struct pollfd ev = {\
-                    .fd = *fd,\
-                    .events = POLLIN|POLLOUT,\
-                    .revents = -1,\
-                };\
-\
-                if (0 < poll(&ev, 1, 8 * 1000)){\
-                    if(nil != (e = set_blocking(*fd))){\
-                        close(*fd);\
-                        e = __err_new(-1, "socket: set_blocking failed", e);\
-                    }\
-                } else {\
-                    e = __err_new_sys();\
-                }\
-            } else {\
-                e = __err_new_sys();\
-            }\
-        }\
-    } else {\
-        e = __err_new(-1, "socket: set_nonblocking failed", e);\
-    }\
-    e;\
-})
+static error_t *
+do_connect(_i fd, struct sockaddr *sockaddr, size_t siz){
+    error_t *e = nil;
+    if(nil == (e = set_nonblocking(fd))){
+        if (0 == connect(fd, sockaddr, siz)){
+            if(nil != (e = set_blocking(fd))){
+                close(fd);
+                e = __err_new(-1, "socket: set_blocking failed", e);
+            }
+        } else {
+            if (EINPROGRESS == errno){
+                struct pollfd ev = {
+                    .fd = fd,
+                    .events = POLLIN|POLLOUT,
+                    .revents = -1,
+                };
+
+                if (0 < poll(&ev, 1, 8 * 1000)){
+                    if(nil != (e = set_blocking(fd))){
+                        close(fd);
+                        e = __err_new(-1, "socket: set_blocking failed", e);
+                    }
+                } else {
+                    e = __err_new_sys();
+                }
+            } else {
+                e = __err_new_sys();
+            }
+        }
+    } else {
+        e = __err_new(-1, "socket: set_nonblocking failed", e);
+    }
+
+    return e;
+}
 
 //**used on client side**
 //@param addr[in]: unix socket path, or serv ip, or url
@@ -354,15 +357,15 @@ cli_connect(const char *addr, const char *port, _i *fd){
     _i rv;
     error_t *e = nil;
 
-    if (__check_bit(*fd, _UNIX_SOCKET_BIT_IDX)){
+    if(__check_bit(*fd, _UNIX_SOCKET_BIT_IDX)){
         struct sockaddr_un un = {
             .sun_family = AF_UNIX,
         };
-        snprintf(un.sun_path, _UN_PATH_SIZ, "%s", addr);
+        un.sun_len = sizeof(un) - sizeof(un.sun_path);
+        un.sun_len += snprintf(un.sun_path, _UN_PATH_SIZ, "%s", addr);
+        un.sun_len++; //'\0'
 
-        if(nil != (e = __do_connect((struct sockaddr *)&un, sizeof(struct sockaddr_un)))){
-            return e;
-        }
+        e = do_connect(*fd, (struct sockaddr *)(&un), un.sun_len);
     } else {
         __drop(addrinfo_drop) struct addrinfo *ais = nil;
         struct addrinfo *ai;
@@ -372,18 +375,18 @@ cli_connect(const char *addr, const char *port, _i *fd){
         }
 
         *fd = -1;
-        for (ai = ais; nil != ai; ai = ai->ai_next){
-            if(nil == (e = __do_connect(ai->ai_addr, (AF_INET6 == ai->ai_family) ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in)))){
+        for(ai = ais; nil != ai; ai = ai->ai_next){
+            if(nil == (e = do_connect(*fd, ai->ai_addr, (AF_INET6 == ai->ai_family) ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in)))){
                 break;
             }
         }
 
         if(nil != e){
-            return __err_new(-1, "connect failed", nil);
+            e = __err_new(-1, "connect failed", nil);
         }
     }
 
-    return nil;
+    return e;
 }
 
 static error_t *
