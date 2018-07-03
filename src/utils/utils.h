@@ -120,6 +120,12 @@ struct error_t{
     exit(1);\
 }while(0)
 
+#define __check_fatal(__e, __expr) do{\
+    if(nil != ((__e) = (__expr))){\
+        __display_and_fatal(__e);\
+    }\
+}while(0)
+
 #define __fatal(__msg) do{\
     utils.fatal((__msg), __FILE__, __LINE__, __func__);\
 }while(0)

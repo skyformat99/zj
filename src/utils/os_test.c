@@ -36,29 +36,30 @@ accept_worker(void *serv_fds){
     _i rv;
     error_t *e;
 
-    if(nil != (e = os.set_nonblocking(fd[0]))){
-        __display_and_fatal(e);
-    }
-
-    if(nil != (e = os.set_nonblocking(fd[1]))){
-        __display_and_fatal(e);
-    }
+    char recvbuf[sizeof("abc")];
 
     while(1){
         if(0 > (rv = accept(fd[0], nil, nil))){
-            if(EAGAIN != errno && EWOULDBLOCK != errno){
-                __fatal(strerror(errno));
-            }
+            __fatal(strerror(errno));
         } else {
+            memset(recvbuf, 0, sizeof("abc"));
+            __check_fatal(e, os.recv(rv, recvbuf, sizeof("abc")));
+            So(0, strcmp("abc", recvbuf));
 
+            __check_fatal(e, os.send(rv, "def", sizeof("def")));
         }
 
         if(0 > (rv = accept(fd[1], nil, nil))){
-            if(EAGAIN != errno && EWOULDBLOCK != errno){
-                __fatal(strerror(errno));
-            }
+            __fatal(strerror(errno));
         } else {
+            memset(recvbuf, 0, sizeof("abc"));
+            __check_fatal(e, os.recv(rv, recvbuf, sizeof("abc")));
+            So(0, strcmp("abc", recvbuf));
 
+            struct iovec iv[1];
+            iv[0].iov_base = "def";
+            iv[0].iov_len = sizeof("def");
+            __check_fatal(e, os.sendmsg(rv, iv, 1));
         }
     }
 
@@ -70,7 +71,6 @@ serv_fd_frop(_i **fd){
     close((*fd)[0]);
     close((*fd)[1]);
     free(*fd);
-    unlink("/tmp/__un__");
 }
 
 void
@@ -82,11 +82,15 @@ tcp_communication(void){
     const char *ip_addr = "localhost";
     const char *ip_port = "9527";
 
+    unlink(unix_path);
+
     pid = fork();
     if(0 > pid){
         __fatal(strerror(errno));
     } else if(0 == pid){
         _i unix_cli_fd, ip_cli_fd;
+        char recvbuf[sizeof("def")];
+
         sleep(1);
 
         unix_cli_fd = 0;
@@ -97,6 +101,12 @@ tcp_communication(void){
         }
         SoLt(0, unix_cli_fd);
 
+        __check_fatal(e, os.send(unix_cli_fd, "abc", sizeof("abc")));
+
+        memset(recvbuf, 0, sizeof("def"));
+        __check_fatal(e, os.recv(unix_cli_fd, recvbuf, sizeof("def")));
+        So(0, strcmp("def", recvbuf));
+
         ip_cli_fd = 0;
         //__unset_bit(fd[0], _UNIX_SOCKET_BIT_IDX);
         //__unset_bit(fd[0], _PROTO_UDP_BIT_IDX);
@@ -104,6 +114,12 @@ tcp_communication(void){
             __display_and_fatal(e);
         }
         SoLt(0, ip_cli_fd);
+
+        __check_fatal(e, os.send(ip_cli_fd, "abc", sizeof("abc")));
+
+        memset(recvbuf, 0, sizeof("def"));
+        __check_fatal(e, os.recv(ip_cli_fd, recvbuf, sizeof("def")));
+        So(0, strcmp("def", recvbuf));
     } else {
         __drop(serv_fd_frop) _i *fd = __alloc(2 * sizeof(_i));
 
@@ -131,9 +147,6 @@ tcp_communication(void){
             __display_and_fatal(e);
         }
 
-        os.set_nonblocking(fd[0]);
-        os.set_nonblocking(fd[1]);
-
         threadpool.addjob(accept_worker, fd);
 
         if(0 > waitpid(pid, nil, 0)){
@@ -141,10 +154,7 @@ tcp_communication(void){
         }
     }
 }
-    //error_t *(*send) (_i, void *, size_t);
     //error_t *(*sendmsg) (_i, struct iovec *, size_t);
-    //error_t *(*recv) (_i, void *, size_t);
-    //error_t *(*recvall) (_i, void *, size_t);
 
     //void (*fd_trans_init) (struct fd_trans_env *);
     //error_t *(*send_fd) (struct fd_trans_env *, const _i, const _i);

@@ -29,10 +29,9 @@ struct os{
 
     error_t *(*connect) (const char *, const char *, _i *);
 
-    error_t *(*send) (_i, void *, size_t);
+    error_t *(*send) (_i, void *, ssize_t);
     error_t *(*sendmsg) (_i, struct iovec *, size_t);
     error_t *(*recv) (_i, void *, size_t);
-    error_t *(*recvall) (_i, void *, size_t);
 
     void (*fd_trans_init) (struct fd_trans_env *);
     error_t *(*send_fd) (struct fd_trans_env *, const _i, const _i);

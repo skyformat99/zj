@@ -42,10 +42,9 @@ inline static error_t *serv_listen(_i fd);
 
 static error_t *cli_connect(const char *addr, const char *port, _i *fd);
 
-inline static error_t *_send(_i fd, void *data, size_t data_siz) __prm_nonnull;
+inline static error_t *_send(_i fd, void *data, ssize_t data_siz) __prm_nonnull;
 inline static error_t *connected_sendmsg(_i fd, struct iovec *vec, size_t vec_cnt) __prm_nonnull;
 inline static error_t *_recv(_i fd, void *data, size_t data_siz) __prm_nonnull;
-inline static error_t *recvall(_i fd, void *data, size_t data_siz) __prm_nonnull;
 
 static void fd_trans_init(struct fd_trans_env *env) __prm_nonnull;
 static error_t * send_fd(struct fd_trans_env *env, const _i unix_fd, const _i fd_to_send) __prm_nonnull;
@@ -69,7 +68,6 @@ struct os os = {
     .send = _send,
     .sendmsg = connected_sendmsg,
     .recv = _recv,
-    .recvall = recvall,
 
     .fd_trans_init = fd_trans_init,
     .send_fd = send_fd,
@@ -252,7 +250,7 @@ ip_socket_new(const char *addr, const char *port, _i *fd){
     }
 
     for (ai = ais; nil != ai; ai = ai->ai_next){
-        if(0 < (*fd = socket( ai->ai_family, hints_.ai_socktype, hints_.ai_protocol))){
+        if(0 < (*fd = socket(ai->ai_family, hints_.ai_socktype, hints_.ai_protocol))){
             break;
         }
     }
@@ -355,17 +353,29 @@ cli_connect(const char *addr, const char *port, _i *fd){
     }
 
     _i rv;
+    _i socksiz;
+    _i socktype;
     error_t *e = nil;
+
+    if(__check_bit(*fd, _PROTO_UDP_BIT_IDX)){
+        socktype =  SOCK_DGRAM;
+    } else {
+        socktype =  SOCK_STREAM;
+    }
 
     if(__check_bit(*fd, _UNIX_SOCKET_BIT_IDX)){
         struct sockaddr_un un = {
             .sun_family = AF_UNIX,
         };
-        _i unlen = sizeof(un) - sizeof(un.sun_path);
-        unlen += snprintf(un.sun_path, _UN_PATH_SIZ, "%s", addr);
-        unlen++; //'\0'
+        socksiz = sizeof(un) - sizeof(un.sun_path);
+        socksiz += snprintf(un.sun_path, _UN_PATH_SIZ, "%s", addr);
+        socksiz++; //'\0'
 
-        e = do_connect(*fd, (struct sockaddr *)(&un), unlen);
+        if(0 > (*fd = socket(AF_UNIX, socktype, 0))){
+            e = __err_new_sys();
+        } else {
+            e = do_connect(*fd, (struct sockaddr *)(&un), socksiz);
+        }
     } else {
         __drop(addrinfo_drop) struct addrinfo *ais = nil;
         struct addrinfo *ai;
@@ -376,13 +386,25 @@ cli_connect(const char *addr, const char *port, _i *fd){
 
         *fd = -1;
         for(ai = ais; nil != ai; ai = ai->ai_next){
-            if(nil == (e = do_connect(*fd, ai->ai_addr, (AF_INET6 == ai->ai_family) ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in)))){
+            if(AF_INET6 == ai->ai_family){
+                socksiz = sizeof(struct sockaddr_in6);
+            } else {
+                socksiz = sizeof(struct sockaddr_in);
+            }
+            if(0 > (*fd = socket(ai->ai_family, socktype, 0))){
+                e = __err_new_sys();
                 break;
+            }
+            if(nil == (e = do_connect(*fd, ai->ai_addr, socksiz))){
+                break;
+            } else {
+                e = nil;
+                close(*fd);
             }
         }
 
         if(nil != e){
-            e = __err_new(-1, "connect failed", nil);
+            e = __err_new(-1, "connect failed", e);
         }
     }
 
@@ -399,17 +421,8 @@ _recv(_i fd, void *data, size_t data_siz){
 }
 
 static error_t *
-recvall(_i fd, void *data, size_t data_siz){
-    if(0 > recv(fd, data, data_siz, MSG_WAITALL)){
-        return __err_new_sys();
-    }
-
-    return nil;
-}
-
-static error_t *
-_send(_i fd, void *data, size_t data_siz){
-    if(0 > send(fd, data, data_siz, 0)){
+_send(_i fd, void *data, ssize_t data_siz){
+    if(data_siz > send(fd, data, data_siz, 0)){
         return __err_new_sys();
     }
 
