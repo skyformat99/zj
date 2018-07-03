@@ -211,16 +211,16 @@ struct error_t{
  */
 // Set bit meaning set a bit to 1; Index from 1
 #define __set_bit(__obj, __idx) do {\
-    (__obj) |= ((((__obj) >> (__idx)) | 1) << (__idx));\
+    (__obj) |= ((((__obj) >> ((__idx) - 1)) | 1) << ((__idx) - 1));\
 } while(0)
 
 // Unset bit meaning set a bit to 0; Index from 1
 #define __unset_bit(__obj, __idx) do {\
-    (__obj) &= ~(((~(__obj) >> (__idx)) | 1) << (__idx));\
+    (__obj) &= ~(((~(__obj) >> ((__idx) - 1)) | 1) << ((__idx) - 1));\
 } while(0)
 
 // Check bit meaning check if a bit is 1; Index from 1
-#define __check_bit(__obj, __idx) ((__obj) ^ ((__obj) & ~(((~(__obj) >> (__idx)) | 1) << (__idx))))
+#define __check_bit(__obj, __idx) ((__obj) ^ ((__obj) & ~(((~(__obj) >> ((__idx) - 1)) | 1) << ((__idx) - 1))))
 
 /**
  * Signal Management

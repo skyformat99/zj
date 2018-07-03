@@ -455,9 +455,14 @@ fd_trans_init(struct fd_trans_env *env){
     env->msg.msg_name = nil;
     env->msg.msg_namelen = 0;
 
-    //need not send regular data
-    env->msg.msg_iov = nil;
-    env->msg.msg_iovlen = 0;
+    //keep 1 byte regular data to send
+    static struct iovec vdata[1];
+    static char buf[1] = "";
+    vdata[0].iov_base = buf,
+    vdata[0].iov_len = 1,
+
+    env->msg.msg_iov = vdata;
+    env->msg.msg_iovlen = 1;
 
     env->msg.msg_control = env->cmsgbuf;
     env->msg.msg_controllen = CMSG_SPACE(sizeof(_i)),
@@ -488,7 +493,7 @@ send_fd(struct fd_trans_env *env, const _i unix_fd, const _i fd_to_send){
     //write data
     *(_i *)CMSG_DATA(env->cmsg) = fd_to_send;
 
-    if (0 != sendmsg(unix_fd, &env->msg, MSG_NOSIGNAL)){
+    if (0 > sendmsg(unix_fd, &env->msg, MSG_NOSIGNAL)){
         return __err_new_sys();
     }
 
@@ -507,7 +512,7 @@ static error_t *
 recv_fd(struct fd_trans_env *env, const _i unix_fd, _i *fd_to_recv){
     //*(_i *)CMSG_DATA(CMSG_FIRSTHDR(&env->msg)) = -1;
 
-    if (0 > recvmsg(unix_fd, &env->msg, 0)){
+    if (1 > recvmsg(unix_fd, &env->msg, 0)){
         return __err_new_sys();
     } else {
         //a success recvmsg will update env->cmsg

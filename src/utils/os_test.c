@@ -33,34 +33,72 @@ rm_all(void){
 void *
 accept_worker(void *serv_fds){
     _i *fd = serv_fds;
-    _i rv;
+    _i rv, transfd;
     error_t *e;
 
-    char recvbuf[sizeof("abc")];
+    struct fd_trans_env fte;
+    fd_trans_init(&fte);
+
+    sleep(1);
+
+    transfd = 0;
+    __set_bit(transfd, _UNIX_SOCKET_BIT_IDX);
+    __set_bit(transfd, _PROTO_UDP_BIT_IDX);
+    __check_fatal(e, os.connect("/tmp/__trans__", nil, &transfd));
 
     while(1){
         if(0 > (rv = accept(fd[0], nil, nil))){
             __fatal(strerror(errno));
         } else {
-            memset(recvbuf, 0, sizeof("abc"));
-            __check_fatal(e, os.recv(rv, recvbuf, sizeof("abc")));
-            So(0, strcmp("abc", recvbuf));
-
-            __check_fatal(e, os.send(rv, "def", sizeof("def")));
+            __check_fatal(e, send_fd(&fte, transfd, rv));
+            close(rv);
         }
 
         if(0 > (rv = accept(fd[1], nil, nil))){
             __fatal(strerror(errno));
         } else {
-            memset(recvbuf, 0, sizeof("abc"));
-            __check_fatal(e, os.recv(rv, recvbuf, sizeof("abc")));
-            So(0, strcmp("abc", recvbuf));
-
-            struct iovec iv[1];
-            iv[0].iov_base = "def";
-            iv[0].iov_len = sizeof("def");
-            __check_fatal(e, os.sendmsg(rv, iv, 1));
+            __check_fatal(e, send_fd(&fte, transfd, rv));
+            close(rv);
         }
+    }
+
+    return nil;
+}
+
+void *
+data_worker(void *serv_fds){
+    error_t *e;
+    char recvbuf[sizeof("abc")];
+
+    struct iovec iv[2];
+    iv[0].iov_base = "def";
+    iv[0].iov_len = sizeof("def") - 1;
+    iv[1].iov_base = "";
+    iv[1].iov_len = 1;
+
+    _i fd, transfd;
+    struct fd_trans_env fte;
+    fd_trans_init(&fte);
+
+    unlink("/tmp/__trans__");
+
+    transfd = 0;
+    __set_bit(transfd, _UNIX_SOCKET_BIT_IDX);
+    __set_bit(transfd, _PROTO_UDP_BIT_IDX);
+    __check_fatal(e, unix_socket_new("/tmp/__trans__", &transfd));
+
+    threadpool.addjob(accept_worker, serv_fds);
+
+    while(1){
+          __check_fatal(e, os.recv_fd(&fte, transfd, &fd));
+
+        memset(recvbuf, 0, sizeof("abc"));
+        __check_fatal(e, os.recv(fd, recvbuf, sizeof("abc")));
+        So(0, strcmp("abc", recvbuf));
+
+        __check_fatal(e, os.sendmsg(fd, iv, 2));
+
+        close(fd);
     }
 
     return nil;
@@ -74,7 +112,7 @@ serv_fd_frop(_i **fd){
 }
 
 void
-tcp_communication(void){
+socket_communication(void){
     error_t *e;
     pid_t pid;
 
@@ -91,7 +129,7 @@ tcp_communication(void){
         _i unix_cli_fd, ip_cli_fd;
         char recvbuf[sizeof("def")];
 
-        sleep(1);
+        sleep(2);
 
         unix_cli_fd = 0;
         __set_bit(unix_cli_fd, _UNIX_SOCKET_BIT_IDX);
@@ -147,21 +185,16 @@ tcp_communication(void){
             __display_and_fatal(e);
         }
 
-        threadpool.addjob(accept_worker, fd);
+        threadpool.addjob(data_worker, fd);
 
         if(0 > waitpid(pid, nil, 0)){
             __fatal(strerror(errno));
         }
     }
 }
-    //error_t *(*sendmsg) (_i, struct iovec *, size_t);
-
-    //void (*fd_trans_init) (struct fd_trans_env *);
-    //error_t *(*send_fd) (struct fd_trans_env *, const _i, const _i);
-    //error_t *(*recv_fd) (struct fd_trans_env *, const _i, _i *);
 
 _i
 main(void){
     rm_all();
-    tcp_communication();
+    socket_communication();
 }
