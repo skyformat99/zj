@@ -381,7 +381,25 @@ cli_connect(const char *addr, const char *port, _i *fd){
     return nil;
 }
 
-inline static error_t *
+static error_t *
+_recv(_i fd, void *data, size_t data_siz){
+    if(0 > recv(fd, data, data_siz, 0)){
+        return __err_new_sys();
+    }
+
+    return nil;
+}
+
+static error_t *
+recvall(_i fd, void *data, size_t data_siz){
+    if(0 > recv(fd, data, data_siz, MSG_WAITALL)){
+        return __err_new_sys();
+    }
+
+    return nil;
+}
+
+static error_t *
 _send(_i fd, void *data, size_t data_siz){
     if(0 > send(fd, data, data_siz, 0)){
         return __err_new_sys();
@@ -390,7 +408,7 @@ _send(_i fd, void *data, size_t data_siz){
     return nil;
 }
 
-inline static error_t *
+static error_t *
 connected_sendmsg(_i fd, struct iovec *vec, size_t vec_cnt){
     struct msghdr msg = {
         .msg_name = nil,
@@ -409,159 +427,87 @@ connected_sendmsg(_i fd, struct iovec *vec, size_t vec_cnt){
     return nil;
 }
 
-inline static error_t *
-_recv(_i fd, void *data, size_t data_siz){
-    if(0 > recv(fd, data, data_siz, 0)){
+//Can be used to impl multi process_mode server
+//MUST use helper macros to adapt variable os: CMSG_SPACE/CMSG_LEN/CMSG_DATA
+struct fd_trans_env{
+    struct msghdr msg;
+
+    //CMSG_SPACE(_): possiable max data len
+    char cmsgbuf[CMSG_SPACE(sizeof(_i))];
+    struct cmsghdr *cmsg;
+};
+
+//@param env[in, inner write out]
+static void
+fd_trans_init(struct fd_trans_env *env){
+    //if using UDP, MUST have connected
+    env->msg.msg_name = nil;
+    env->msg.msg_namelen = 0;
+
+    //need not send regular data
+    env->msg.msg_iov = nil;
+    env->msg.msg_iovlen = 0;
+
+    env->msg.msg_control = env->cmsgbuf;
+    env->msg.msg_controllen = CMSG_SPACE(sizeof(_i)),
+
+    //no trans flags
+    env->msg.msg_flags = 0;
+
+    //easy to use 
+    env->cmsg = env->msg.msg_control;
+
+    env->cmsg->cmsg_level = SOL_SOCKET;
+    env->cmsg->cmsg_type = SCM_RIGHTS; //socket controling management rights
+
+    //CMSG_LEN(_): actual data len
+    env->cmsg->cmsg_len = CMSG_LEN(sizeof(_i));
+}
+
+//@param env[in]:
+//@param unix_fd[in]:
+//@param fd_to_send[in]:
+//USAGE:
+//    - define a fd_trans_env struct,
+//    - and init it with fd_trans_int(_) ,
+//    - then pass it to send_fd,
+//    - following send_fd(_) can reuse it
+static error_t *
+send_fd(struct fd_trans_env *env, const _i unix_fd, const _i fd_to_send){
+    //write data
+    *(_i *)CMSG_DATA(env->cmsg) = fd_to_send;
+
+    if (0 != sendmsg(unix_fd, &env->msg, MSG_NOSIGNAL)){
         return __err_new_sys();
     }
 
     return nil;
 }
 
-inline static error_t *
-recvall(_i fd, void *data, size_t data_siz){
-    if(0 > recv(fd, data, data_siz, MSG_WAITALL)){
+//@param env[in]:
+//@param unix_fd[in]:
+//@param fd_to_recv[out]:
+//USAGE:
+//    - define a fd_trans_env struct,
+//    - and init it with fd_trans_int(_) ,
+//    - then pass it to recv_fd,
+//    - following recv_fd(_) can reuse it
+static error_t *
+recv_fd(struct fd_trans_env *env, const _i unix_fd, _i *fd_to_recv){
+    //*(_i *)CMSG_DATA(CMSG_FIRSTHDR(&env->msg)) = -1;
+
+    if (0 > recvmsg(unix_fd, &env->msg, 0)){
         return __err_new_sys();
-    }
-
-    return nil;
-}
-
-/*
- * 进程间传递文件描述符
- * 用于实现多进程模型服务器
- * 每次只传送一个 fd
- * @param: zUN 是 UNIX 域套接字，用作传输的工具
- * @param: zFd 是需要被传递的目标 fd
- * 返回 0 表示成功，否则表示失败
- * 若使用 UDP 通信，则必须事先完成了 connect
- */
-static _i
-zsend_fd(const _i zUN, const _i zFd, void *zpPeerAddr, _i zAddrSiz){
-    /*
-     * 法1:可以只发送一个字节的常规数据，与连接连开区分
-     * 用于判断 sendmsg 的执行结果
-     * 法2:也可以发送空内容
-     */
-    //struct iovec zVec_ = {
-    //    .iov_base = "",
-    //    .iov_len = zBYTES(1),
-    //};
-
-    /*
-     * 存放将要被发送的 fd 的所有必要信息的空间
-     * 为适用不同的硬件平台，需要使用宏取值
-     */
-    char zCmsgBuf[CMSG_SPACE(sizeof(_i))];
-
-    /*
-     * sendmsg 直接使用的最外层结构体
-     */
-    struct msghdr zMsg_ = {
-        .msg_name = zpPeerAddr,
-        .msg_namelen = zAddrSiz,
-
-        //.msg_iov = &zVec_,
-        //.msg_iovlen = 1,
-        .msg_iov = nil,
-        .msg_iovlen = 0,
-
-        .msg_control = zCmsgBuf,
-        .msg_controllen = CMSG_SPACE(sizeof(_i)),
-
-        .msg_flags = 0,
-    };
-
-    /*
-     * 以下为控制数据赋值
-     */
-    struct cmsghdr *zpCmsg = zMsg_.msg_control;
-
-    /*
-     * 声明传递的数据层级：SOL_SOCKET
-     * 与 setsockopt 中的含义一致
-     */
-    zpCmsg->cmsg_level = SOL_SOCKET;
-
-    /*
-     * 声明传递的数据类型是：
-     * socket controling management rights/权限
-     */
-    zpCmsg->cmsg_type = SCM_RIGHTS;
-
-    /*
-     * CMSG_SPACE(data_to_send) 永远 >= CMSG_LEN(data_to_send)
-     * 因为前者对实际要发送的数据对象，也做了对齐填充计算
-     * 而后者是 cmsghdr 结构体对齐填充后的大小，与实际数据的原始长度之和
-     */
-    zpCmsg->cmsg_len = CMSG_LEN(sizeof(_i));
-
-    /*
-     * cmsghdr 结构体的最后一个成员是 C99 风格的 data[] 形式
-     * 使用宏将目标 fd 写入此位置，
-     */
-    * (_i *) CMSG_DATA(zpCmsg) = zFd;
-
-    /*
-     * 成功发送了 1/0 个字节的数据，即说明执行成功
-     */
-    //if (1 == sendmsg(zUN, &zMsg_, MSG_NOSIGNAL)){
-    if (0 == sendmsg(zUN, &zMsg_, MSG_NOSIGNAL)){
-        return 0;
     } else {
-        return -1;
-    }
-}
-
-
-/*
- * 接收其它进程传递过来的 fd
- * 成功返回 fd（正整数），失败返回 -1
- * @param: 传递所用的 UNIX 域套接字
- * 若使用 UDP 通信，则必须事先完成了 connect
- */
-static _i
-zrecv_fd(const _i zFd){
-    char _;
-    struct iovec zVec_ = {
-        .iov_base = &_,
-        .iov_len = 1,
-    };
-
-    char zCmsgBuf[CMSG_SPACE(sizeof(_i))];
-
-    struct msghdr zMsg_ = {
-        .msg_name = nil,
-        .msg_namelen = 0,
-
-        .msg_iov = &zVec_,
-        .msg_iovlen = 1,
-
-        .msg_control = zCmsgBuf,
-        .msg_controllen = CMSG_SPACE(sizeof(_i)),
-
-        .msg_flags = 0,
-    };
-
-    /* 目标 fd 空间预置为 -1 */
-    * (_i *) CMSG_DATA(CMSG_FIRSTHDR(&zMsg_)) = -1;
-
-    /*
-     * zsend_fd() 只发送了一个字节的常规数据
-     */
-    if (1 == recvmsg(zFd, &zMsg_, 0)){
-        if (nil == CMSG_FIRSTHDR(&zMsg_)){
-            return -1;
+        //a success recvmsg will update env->cmsg
+        if (nil == CMSG_FIRSTHDR(&env->msg)){
+            return __err_new(-1, "recv_fd failed", nil);
         } else {
-            /*
-             * 只发送了一个 cmsghdr 结构体 + fd
-             * 其最后的 data[] 存放的即是接收到的 fd
-             */
-            return * (_i *) CMSG_DATA(CMSG_FIRSTHDR(&zMsg_));
+            *fd_to_recv = *(_i *)CMSG_DATA(CMSG_FIRSTHDR(&env->msg));
         }
-    } else {
-        return -1;
     }
+
+    return nil;
 }
 
 #undef _UN_PATH_SIZ
