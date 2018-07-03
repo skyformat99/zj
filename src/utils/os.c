@@ -283,9 +283,9 @@ unix_socket_new(const char *path, _i *fd){
     struct sockaddr_un un = {
         .sun_family = AF_UNIX,
     };
-    un.sun_len = sizeof(un) - sizeof(un.sun_path);
-    un.sun_len += snprintf(un.sun_path, _UN_PATH_SIZ, "%s", path);
-    un.sun_len++; //'\0'
+    _i unlen = sizeof(un) - sizeof(un.sun_path);
+    unlen += snprintf(un.sun_path, _UN_PATH_SIZ, "%s", path);
+    unlen++; //'\0'
 
     if(0 > (*fd = socket(AF_UNIX, __check_bit(*fd, _PROTO_UDP_BIT_IDX) ? SOCK_DGRAM : SOCK_STREAM, 0))){
         *fd = -1;
@@ -297,7 +297,7 @@ unix_socket_new(const char *path, _i *fd){
         return __err_new_sys()
     }
 
-    if(0 > bind(*fd, (struct sockaddr *) &un, un.sun_len)){
+    if(0 > bind(*fd, (struct sockaddr *) &un, unlen)){
         close(*fd);
         *fd = -1;
         return __err_new_sys();
@@ -361,11 +361,11 @@ cli_connect(const char *addr, const char *port, _i *fd){
         struct sockaddr_un un = {
             .sun_family = AF_UNIX,
         };
-        un.sun_len = sizeof(un) - sizeof(un.sun_path);
-        un.sun_len += snprintf(un.sun_path, _UN_PATH_SIZ, "%s", addr);
-        un.sun_len++; //'\0'
+        _i unlen = sizeof(un) - sizeof(un.sun_path);
+        unlen += snprintf(un.sun_path, _UN_PATH_SIZ, "%s", addr);
+        unlen++; //'\0'
 
-        e = do_connect(*fd, (struct sockaddr *)(&un), un.sun_len);
+        e = do_connect(*fd, (struct sockaddr *)(&un), unlen);
     } else {
         __drop(addrinfo_drop) struct addrinfo *ais = nil;
         struct addrinfo *ai;

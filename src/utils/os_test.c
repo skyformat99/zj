@@ -34,9 +34,18 @@ void *
 accept_worker(void *serv_fds){
     _i *fd = serv_fds;
     _i rv;
+    error_t *e;
+
+    if(nil != (e = os.set_nonblocking(fd[0]))){
+        __display_and_fatal(e);
+    }
+
+    if(nil != (e = os.set_nonblocking(fd[1]))){
+        __display_and_fatal(e);
+    }
 
     while(1){
-        if(0 > (rv = accept4(fd[0], nil, nil, SOCK_NONBLOCK))){
+        if(0 > (rv = accept(fd[0], nil, nil))){
             if(EAGAIN != errno && EWOULDBLOCK != errno){
                 __fatal(strerror(errno));
             }
@@ -44,7 +53,7 @@ accept_worker(void *serv_fds){
 
         }
 
-        if(0 > (rv = accept4(fd[1], nil, nil, SOCK_NONBLOCK))){
+        if(0 > (rv = accept(fd[1], nil, nil))){
             if(EAGAIN != errno && EWOULDBLOCK != errno){
                 __fatal(strerror(errno));
             }
