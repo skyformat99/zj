@@ -17,9 +17,9 @@ static void nng_sha1_final(nng_sha1_ctx *, uint8_t[20]);
 static void nng_sha1(const void *, size_t, uint8_t[20]);
 
 static void sha1_lower_case(void *, size_t, char[41]);
-static error_t * sha1_file_lower_case(char *filepath, char res[41]);
+static Error * sha1_file_lower_case(char *filepath, char res[41]);
 
-struct nng_sha1 sha1 = {
+struct SHA1 sha1 = {
     .init = nng_sha1_init,
     .update = nng_sha1_update,
     .final = nng_sha1_final,
@@ -238,7 +238,7 @@ sha1_lower_case(void *src, size_t src_siz, char res[41]){
 //@param filepath[in]:
 //upper_case_or_not[in]: 0 for lowercase
 //@param res[out]:
-static error_t *
+static Error *
 sha1_file_lower_case(char *filepath, char res[41]){
     uint8_t r[20];
     nng_sha1_ctx ctx;

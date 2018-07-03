@@ -1,13 +1,13 @@
-#include <regex.h>
+#ifndef _REGEX_H
+#define _REGEX_H
 
-typedef struct __zRegRes__ {
-    char **pp_rets;  //matched results
-    _i *p_resLen;  // results' strlen
-    _i cnt;         //total num of matched substrings
+#include "utils.h"
 
-    void * (* alloc_fn) (size_t);
-} zRegRes__ ;
+struct regex_res_t {
+    _i cnt;       //total num of matched substrings
 
-typedef regex_t zRegInit__;
+    char **res;  //matched results
+    _i *reslen;  // results' strlen
+};
 
-TODO
+#endif

@@ -29,28 +29,28 @@
 #define __err_new_sys() __err_new(errno, strerror(errno), nil)
 
 static void daemonize(const char *runpath);
-static error_t *remove_all(char *path) __prm_nonnull;
+static Error *remove_all(char *path) __prm_nonnull;
 
-static error_t *set_nonblocking(_i fd);
-static error_t *set_blocking(_i fd);
+static Error *set_nonblocking(_i fd);
+static Error *set_blocking(_i fd);
 
-static error_t *socket_new(const char *addr, const char *port, _i *fd);
-static error_t *ip_socket_new(const char *addr, const char *port, _i *fd) __prm_nonnull;
-static error_t *unix_socket_new(const char *path, _i *fd) __prm_nonnull;
+static Error *socket_new(const char *addr, const char *port, _i *fd);
+static Error *ip_socket_new(const char *addr, const char *port, _i *fd) __prm_nonnull;
+static Error *unix_socket_new(const char *path, _i *fd) __prm_nonnull;
 
-inline static error_t *serv_listen(_i fd);
+inline static Error *serv_listen(_i fd);
 
-static error_t *cli_connect(const char *addr, const char *port, _i *fd);
+static Error *cli_connect(const char *addr, const char *port, _i *fd);
 
-inline static error_t *_send(_i fd, void *data, ssize_t data_siz) __prm_nonnull;
-inline static error_t *connected_sendmsg(_i fd, struct iovec *vec, size_t vec_cnt) __prm_nonnull;
-inline static error_t *_recv(_i fd, void *data, size_t data_siz) __prm_nonnull;
+inline static Error *_send(_i fd, void *data, ssize_t data_siz) __prm_nonnull;
+inline static Error *connected_sendmsg(_i fd, struct iovec *vec, size_t vec_cnt) __prm_nonnull;
+inline static Error *_recv(_i fd, void *data, size_t data_siz) __prm_nonnull;
 
-static void fd_trans_init(struct fd_trans_env *env) __prm_nonnull;
-static error_t * send_fd(struct fd_trans_env *env, const _i unix_fd, const _i fd_to_send) __prm_nonnull;
-static error_t * recv_fd(struct fd_trans_env *env, const _i unix_fd, _i *fd_to_recv) __prm_nonnull;
+static void fd_trans_init(struct FdTransEnv *env) __prm_nonnull;
+static Error * send_fd(struct FdTransEnv *env, const _i unix_fd, const _i fd_to_send) __prm_nonnull;
+static Error * recv_fd(struct FdTransEnv *env, const _i unix_fd, _i *fd_to_recv) __prm_nonnull;
 
-struct os os = {
+struct OS os = {
     .daemonize = daemonize,
     .rm_all = remove_all,
 
@@ -138,7 +138,7 @@ remove_all_ctw_cb(const char *path, const struct stat *stat __unuse,
     return rv;
 }
 
-static error_t *
+static Error *
 remove_all(char *path){
     if(0 != nftw(path, remove_all_ctw_cb, 128, FTW_PHYS/*ignore symlink*/|FTW_DEPTH/*file first*/)){
         return __err_new_sys();
@@ -152,7 +152,7 @@ remove_all(char *path){
  */
 //**used on server and client side**
 //@param fd[in]: socket fd
-static error_t *
+static Error *
 set_nonblocking(_i fd){
     _i opt;
     if(0 > (opt = fcntl(fd, F_GETFL))){
@@ -169,7 +169,7 @@ set_nonblocking(_i fd){
 
 //**used on server and client side**
 //@param fd[in]: socket fd
-static error_t *
+static Error *
 set_blocking(_i fd){
     _i opt;
     if(0 > (opt = fcntl(fd, F_GETFL))){
@@ -195,7 +195,7 @@ addrinfo_drop(struct addrinfo **restrict ais){
 }
 
 //@param fd[in]:
-inline static error_t *
+inline static Error *
 serv_listen(_i fd){
     if(0 >listen(fd, 6)){
         return __err_new(-1, "socket listen failed", nil);
@@ -208,13 +208,13 @@ serv_listen(_i fd){
 //@param addr[in]: unix socket path, or serv ip, or url
 //@param port[in]: serv port
 //@param fd[in and out]: [in] used as bit mark, [out]: generated socket fd
-static error_t *
+static Error *
 socket_new(const char *addr, const char *port, _i *fd){
     if(!(addr && fd)){
         return __err_new(-1, "param<addr, fd> can't be nil", nil);
     }
 
-    error_t *e = nil;
+    Error *e = nil;
 
     if(__check_bit(*fd, _UNIX_SOCKET_BIT_IDX)){
         e = unix_socket_new(addr, fd);
@@ -233,7 +233,7 @@ socket_new(const char *addr, const char *port, _i *fd){
 //@param addr[in]: serv ip or url
 //@param port[in]: serv port
 //@param fd[in and out]: [in] UDP if second_bit setted, or TCP; [out] ==> generated socket fd
-static error_t *
+static Error *
 ip_socket_new(const char *addr, const char *port, _i *fd){
     struct addrinfo hints_  = {
         .ai_flags = AI_PASSIVE|AI_NUMERICSERV,
@@ -276,7 +276,7 @@ ip_socket_new(const char *addr, const char *port, _i *fd){
 //**used on server side**
 //@param path[in]: unix socket path
 //@param fd[in and out]: [in] UDP if second_bit setted, or TCP; [out] ==> generated socket fd
-static error_t *
+static Error *
 unix_socket_new(const char *path, _i *fd){
     struct sockaddr_un un = {
         .sun_family = AF_UNIX,
@@ -306,9 +306,9 @@ unix_socket_new(const char *path, _i *fd){
 
 // timeout: 8000ms(8 secs)
 // poll return: 0 for timeout, 1 for success, -1 for error
-static error_t *
+static Error *
 do_connect(_i fd, struct sockaddr *sockaddr, size_t siz){
-    error_t *e = nil;
+    Error *e = nil;
     if(nil == (e = set_nonblocking(fd))){
         if (0 == connect(fd, sockaddr, siz)){
             if(nil != (e = set_blocking(fd))){
@@ -346,7 +346,7 @@ do_connect(_i fd, struct sockaddr *sockaddr, size_t siz){
 //@param addr[in]: unix socket path, or serv ip, or url
 //@param port[in]: serv port
 //@param fd[in and out]: [in] used as bit mark, [out]: connected fd
-static error_t *
+static Error *
 cli_connect(const char *addr, const char *port, _i *fd){
     if(!(addr && fd)){
         return __err_new(-1, "param<addr, fd> can't be nil", nil);
@@ -355,7 +355,7 @@ cli_connect(const char *addr, const char *port, _i *fd){
     _i rv;
     _i socksiz;
     _i socktype;
-    error_t *e = nil;
+    Error *e = nil;
 
     if(__check_bit(*fd, _PROTO_UDP_BIT_IDX)){
         socktype =  SOCK_DGRAM;
@@ -411,7 +411,7 @@ cli_connect(const char *addr, const char *port, _i *fd){
     return e;
 }
 
-static error_t *
+static Error *
 _recv(_i fd, void *data, size_t data_siz){
     if(0 > recv(fd, data, data_siz, 0)){
         return __err_new_sys();
@@ -420,7 +420,7 @@ _recv(_i fd, void *data, size_t data_siz){
     return nil;
 }
 
-static error_t *
+static Error *
 _send(_i fd, void *data, ssize_t data_siz){
     if(data_siz > send(fd, data, data_siz, 0)){
         return __err_new_sys();
@@ -429,7 +429,7 @@ _send(_i fd, void *data, ssize_t data_siz){
     return nil;
 }
 
-static error_t *
+static Error *
 connected_sendmsg(_i fd, struct iovec *vec, size_t vec_cnt){
     struct msghdr msg = {
         .msg_name = nil,
@@ -450,7 +450,7 @@ connected_sendmsg(_i fd, struct iovec *vec, size_t vec_cnt){
 
 //@param env[in, inner write out]
 static void
-fd_trans_init(struct fd_trans_env *env){
+fd_trans_init(struct FdTransEnv *env){
     //if using UDP, MUST have connected
     env->msg.msg_name = nil;
     env->msg.msg_namelen = 0;
@@ -484,12 +484,12 @@ fd_trans_init(struct fd_trans_env *env){
 //@param unix_fd[in]:
 //@param fd_to_send[in]:
 //USAGE:
-//    - define a fd_trans_env struct,
+//    - define a FdTransEnv struct,
 //    - and init it with fd_trans_int(_) ,
 //    - then pass it to send_fd,
 //    - following send_fd(_) can reuse it
-static error_t *
-send_fd(struct fd_trans_env *env, const _i unix_fd, const _i fd_to_send){
+static Error *
+send_fd(struct FdTransEnv *env, const _i unix_fd, const _i fd_to_send){
     //write data
     *(_i *)CMSG_DATA(env->cmsg) = fd_to_send;
 
@@ -504,14 +504,15 @@ send_fd(struct fd_trans_env *env, const _i unix_fd, const _i fd_to_send){
 //@param unix_fd[in]:
 //@param fd_to_recv[out]:
 //USAGE:
-//    - define a fd_trans_env struct,
+//    - define a FdTransEnv struct,
 //    - and init it with fd_trans_int(_) ,
 //    - then pass it to recv_fd,
 //    - following recv_fd(_) can reuse it
-static error_t *
-recv_fd(struct fd_trans_env *env, const _i unix_fd, _i *fd_to_recv){
+static Error *
+recv_fd(struct FdTransEnv *env, const _i unix_fd, _i *fd_to_recv){
     //*(_i *)CMSG_DATA(CMSG_FIRSTHDR(&env->msg)) = -1;
 
+    //at least 1 byte data
     if (1 > recvmsg(unix_fd, &env->msg, 0)){
         return __err_new_sys();
     } else {

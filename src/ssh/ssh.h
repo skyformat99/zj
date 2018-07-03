@@ -4,11 +4,11 @@
 #include "utils.h"
 #include "libssh/callbacks.h"
 
-struct ssh{
-    error_t * (* exec)(char *, _i *, source_t *, char *, _i, char *, time_t) __mustuse;
-    error_t * (* exec_default)(char *, char *, _i, char *) __mustuse;
+struct SSH{
+    Error * (* exec)(char *, _i *, Source *, char *, _i, char *, time_t) __mustuse;
+    Error * (* exec_default)(char *, char *, _i, char *) __mustuse;
 };
 
-struct ssh ssh;
+struct SSH ssh;
 
 #endif //_SSH_H

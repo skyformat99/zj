@@ -3,9 +3,9 @@
 #include "utils.c"
 #include <string.h>
 
-error_t *e;
+Error *e;
 const char *urlstr;
-source_t s;
+Source s;
 _i status;
 
 #define __env__ {\

@@ -9,6 +9,4 @@ struct HttpCli{
     Error * (*req) (const char *, const char *, Source *, _i *);
 };
 
-struct HttpCli httpcli;
-
 #endif //_HTTPCLI_H

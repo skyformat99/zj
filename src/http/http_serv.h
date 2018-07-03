@@ -5,16 +5,18 @@
 #include "nng/nng.h"
 #include "nng/supplemental/http/http.h"
 
-struct http_serv_hdr{
+struct HttpServ httpserv;
+
+struct HttpServHdr{
     nng_http_handler *nnghdr; //[out]
-    struct http_serv_hdr *next; //[in]
+    struct HttpServHdr *next; //[in]
 };
 
-struct http_serv{
+struct HttpServ{
     nng_http_server * srv;
 
     nng_url *url;
-    struct http_serv_hdr *hdr;
+    struct HttpServHdr *hdr;
 
     pthread_mutex_t mlock;
 };
@@ -23,20 +25,20 @@ struct http_serv{
 
 //can only deal with POST's body
 //@param hdr_name: real func_name to register to http_server
-//@param hdr_inner_worker: _i body_add_1(void *reqbody, size_t reqbody_siz, source_t *resp),
+//@param hdr_inner_worker: _i body_add_1(void *reqbody, size_t reqbody_siz, Source *resp),
 //        use this worker to deal with http_req_body
 #define __gen_http_hdr(hdr_name, hdr_inner_worker)\
         static void\
         hdr_name(nng_aio *aio){\
             _i rv;\
         \
-            source_t req_s = {\
+            Source req_s = {\
                 .data = nil,\
                 .dsiz = 0,\
                 .drop = utils.non_drop,\
             };\
         \
-            source_t resp_s = {\
+            Source resp_s = {\
                 .data = nil,\
                 .dsiz = 0,\
                 .drop = utils.non_drop,\

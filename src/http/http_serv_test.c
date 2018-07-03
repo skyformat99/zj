@@ -11,7 +11,7 @@ pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 //@param resp[out]:
 //#return http_status_code
 _i
-body_add_one_worker(void *reqbody, size_t reqbody_siz __unuse, source_t *resp){
+body_add_one_worker(void *reqbody, size_t reqbody_siz __unuse, Source *resp){
     errno = 0;
     _i v = strtol(reqbody, nil, 10);
     if (0 == errno){
@@ -30,7 +30,7 @@ body_add_one_worker(void *reqbody, size_t reqbody_siz __unuse, source_t *resp){
 }
 
 _i
-echo_worker(void *reqbody, size_t reqbody_siz, source_t *resp){
+echo_worker(void *reqbody, size_t reqbody_siz, Source *resp){
     resp->data = reqbody;
     resp->dsiz = reqbody_siz;
     resp->drop = utils.non_drop;
@@ -44,7 +44,7 @@ __gen_http_hdr(echo, echo_worker);
 __init static void
 handler_register(void){
     //"POST"
-    error_t *e = http_serv_hdr_register("/body_add_one", body_add_one, "POST");
+    Error *e = http_serv_hdr_register("/body_add_one", body_add_one, "POST");
     if(nil != e){
         __display_and_fatal(e);
     }
@@ -56,9 +56,9 @@ handler_register(void){
     }
 }
 
-error_t *e;
+Error *e;
 static _i status;
-static source_t s;
+static Source s;
 
 #define __env__ {\
     e = nil;\
@@ -135,7 +135,7 @@ thread_worker(void *info __unuse){
 
 _i
 main(void){
-    error_t *e = nil;
+    Error *e = nil;
     static char *serv_url = "http://localhost:9000";
 
     e = http_start_server(serv_url);

@@ -22,7 +22,7 @@ void *
 thread_worker(void *info){
     struct bus_info *bi = (struct bus_info *)info;
     nng_socket sock;
-    error_t *e = bus.new(&sock);
+    Error *e = bus.new(&sock);
     if(nil != e){
         __display_and_clean(e);
         exit(1);
@@ -73,7 +73,7 @@ thread_worker(void *info){
 
 static char *leader_url = "tcp://localhost:9000";
 char slave_url[__node_total][64];
-error_t *e;
+Error *e;
 _i rv, i;
 nng_socket sock;
 

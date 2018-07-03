@@ -5,7 +5,7 @@
 
 void
 rm_all(void){
-    error_t *e;
+    Error *e;
     _i fd;
     struct stat s;
 
@@ -34,9 +34,9 @@ void *
 accept_worker(void *serv_fds){
     _i *fd = serv_fds;
     _i rv, transfd;
-    error_t *e;
+    Error *e;
 
-    struct fd_trans_env fte;
+    struct FdTransEnv fte;
     fd_trans_init(&fte);
 
     sleep(1);
@@ -67,7 +67,7 @@ accept_worker(void *serv_fds){
 
 void *
 data_worker(void *serv_fds){
-    error_t *e;
+    Error *e;
     char recvbuf[sizeof("abc")];
 
     struct iovec iv[2];
@@ -77,7 +77,7 @@ data_worker(void *serv_fds){
     iv[1].iov_len = 1;
 
     _i fd, transfd;
-    struct fd_trans_env fte;
+    struct FdTransEnv fte;
     fd_trans_init(&fte);
 
     unlink("/tmp/__trans__");
@@ -113,7 +113,7 @@ serv_fd_frop(_i **fd){
 
 void
 socket_communication(void){
-    error_t *e;
+    Error *e;
     pid_t pid;
 
     const char *unix_path = "/tmp/__un__";

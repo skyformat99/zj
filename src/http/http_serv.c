@@ -6,7 +6,7 @@
 #include <string.h>
 
 //will be registed by webserv modules' __init func...
-static struct http_serv server = {
+static struct HttpServ server = {
     .srv = nil,
     .url = nil,
     .hdr = nil,
@@ -18,7 +18,7 @@ http_serv_clean(void){
     if(nil != server.hdr) {
         pthread_mutex_lock(&server.mlock);
 
-        struct http_serv_hdr *p, *pcur;
+        struct HttpServHdr *p, *pcur;
         p = server.hdr;
         pcur = p;
         while(nil !=  p){
@@ -37,7 +37,7 @@ http_serv_clean(void){
 }
 
 //@param urlstr[in]: http://[::1]:9000
-static error_t *
+static Error *
 http_start_server(const char *urlstr){
     _i rv;
     if(0 != (rv = nng_url_parse(&server.url, urlstr))){
@@ -47,7 +47,7 @@ http_start_server(const char *urlstr){
         return __err_new(rv, nng_strerror(rv), nil);
     }
 
-    struct http_serv_hdr *p = server.hdr;
+    struct HttpServHdr *p = server.hdr;
     while(nil != p){
         if(0 != (rv = nng_http_server_add_handler(server.srv, p->nnghdr))){
             return __err_new(rv, nng_strerror(rv), nil);
@@ -63,20 +63,20 @@ http_start_server(const char *urlstr){
 }
 
 //@method: "POST"/"GET"/nil, if nil, will accept all methods
-error_t *
+Error *
 http_serv_hdr_register(const char *path, void (*cb) (nng_aio *prm), const char *method){
     _i rv;
     pthread_mutex_lock(&server.mlock);
 
-    struct http_serv_hdr *p = server.hdr;
+    struct HttpServHdr *p = server.hdr;
     if(nil == p){
-        p = __alloc(sizeof(struct http_serv_hdr));
+        p = __alloc(sizeof(struct HttpServHdr));
         server.hdr = p;
     } else {
         while(nil != p->next){
             p = p->next;
         }
-        p->next = __alloc(sizeof(struct http_serv_hdr));
+        p->next = __alloc(sizeof(struct HttpServHdr));
         p = p->next;
     }
     p->next = nil;

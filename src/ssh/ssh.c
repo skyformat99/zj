@@ -3,13 +3,13 @@
 
 #define __ssherr_new(__hdr) __err_new(ssh_get_error_code(__hdr), ssh_get_error(__hdr), nil)
 
-static error_t *
-exec_once(char *cmd, _i *exit_status, source_t *cmdout, char *host, _i port, char *username, time_t conn_timeout_secs);
+static Error *
+exec_once(char *cmd, _i *exit_status, Source *cmdout, char *host, _i port, char *username, time_t conn_timeout_secs);
 
-static error_t *
+static Error *
 exec_once_default(char *cmd, char *host, _i port, char *username);
 
-struct ssh ssh = {
+struct SSH ssh = {
     .exec = exec_once,
     .exec_default = exec_once_default,
 };
@@ -55,7 +55,7 @@ channel_drop(ssh_channel *channel){
 }
 
 //simple wrapper of exec_once()
-static error_t *
+static Error *
 exec_once_default(char *cmd, char *host, _i port, char *username) {
     return exec_once(cmd, nil, nil, host, port, username, 10);
 }
@@ -67,8 +67,8 @@ exec_once_default(char *cmd, char *host, _i port, char *username) {
 //@param timeout_secs[in]: 
 //@param exit_status[out]: the exit_status of `cmd`
 //@param cmdout[out]: the stdout and stderr output of `cmd`
-static error_t *
-exec_once(char *cmd, _i *exit_status, source_t *cmdout,
+static Error *
+exec_once(char *cmd, _i *exit_status, Source *cmdout,
         char *host, _i port, char *username, time_t conn_timeout_secs) {
     __drop(session_drop) ssh_session session = ssh_new();
     if(nil == session){

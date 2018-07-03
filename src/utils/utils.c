@@ -21,18 +21,18 @@ static void ncpu(_i *n) __prm_nonnull;
 static void print_time(void);
 static void info(const char *msg, const char *const file, const _i line, const char *const func);
 static void fatal(const char *msg, const char *const file, const _i line, const char *const func);
-static void display_errchain(error_t *e, const char *const file, const _i line, const char *const func);
+static void display_errchain(Error *e, const char *const file, const _i line, const char *const func);
 
 inline static void msleep(_i ms);
 inline static _ui urand(void);
-static void nng_drop(source_t *restrict s);
-static void sys_drop(source_t *restrict s);
-static void non_drop(source_t *restrict s);
+static void nng_drop(Source *restrict s);
+static void sys_drop(Source *restrict s);
+static void non_drop(Source *restrict s);
 
 static void *must_alloc(size_t siz, const char *const file, const _i line, const char *const func);
 static void *must_ralloc(void *orig, size_t newsiz, const char *const file, const _i line, const char *const func);
 
-struct utils utils = {
+struct Utils utils = {
     .ncpu = ncpu,
     .info = info,
     .fatal = fatal,
@@ -75,21 +75,21 @@ urand(void){
 }
 
 static void
-nng_drop(source_t *restrict s){
+nng_drop(Source *restrict s){
     if(nil != s && nil != s->data){
         nng_free(s->data, s->dsiz);
     }
 }
 
 static void
-sys_drop(source_t *restrict s){
+sys_drop(Source *restrict s){
     if(nil != s && nil != s->data){
          free(s->data);
     }
 }
 
 static void
-non_drop(source_t *restrict s){
+non_drop(Source *restrict s){
     (void)s;
 }
 
@@ -208,7 +208,7 @@ fatal(const char *msg, const char *const file, const _i line, const char *const 
 }
 
 static void
-display_errchain(error_t *e, const char *const file, const _i line, const char *const func){
+display_errchain(Error *e, const char *const file, const _i line, const char *const func){
     time_t ts = time(nil);
     struct tm *now = localtime(&ts);
 

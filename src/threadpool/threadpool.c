@@ -12,9 +12,9 @@
 static void * meta_fn(void *_ __unuse);
 static void task_new(void * (*) (void *), void *);
 
-struct thread_pool threadpool = { .addjob = task_new };
+struct ThreadPool threadpool = { .addjob = task_new };
 
-struct thread_task {
+struct ThreadTask {
     pthread_cond_t cond_var;
     char __pad[128];
     pthread_mutex_t cond_lock;
@@ -25,7 +25,7 @@ struct thread_task {
 
 /* 线程池栈结构 */
 static _i pool_siz; // 常备线程数量
-static struct thread_task **pool_stack;
+static struct ThreadTask **pool_stack;
 static _i stack_header;
 static pthread_mutex_t stack_header_lock;
 static pthread_t tid;
@@ -108,7 +108,7 @@ meta_fn(void *_ __unuse){
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, 0);
 
     /* 线程任务桩 */
-    struct thread_task *self_task = __alloc(sizeof(struct thread_task));
+    struct ThreadTask *self_task = __alloc(sizeof(struct ThreadTask));
     if(nil == self_task){
         __fatal(strerror(errno));
     }

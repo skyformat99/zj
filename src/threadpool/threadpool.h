@@ -1,10 +1,10 @@
 #ifndef _THREADPOOL_H
 #define _THREADPOOL_H
 
-struct thread_pool {
+struct ThreadPool{
     void (* addjob) (void * (*) (void *), void *);
 };
 
-struct thread_pool threadpool;
+struct ThreadPool threadpool;
 
 #endif //_THREADPOOL_H

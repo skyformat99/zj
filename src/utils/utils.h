@@ -42,52 +42,49 @@
 #define _lli unsigned long long int
 #define _ulli unsigned long long int
 
-#define _f float
-#define _d double
-
 //Public Interface
-struct utils utils;
+struct Utils utils;
 
 #define nil NULL
-typedef struct error_t error_t;
+typedef struct Error Error;
 
 #include <sys/types.h>
-typedef struct source_t{
+typedef struct Source {
     void *data;
     size_t dsiz;
-    void (*drop)(struct source_t *);
-}source_t;
+    void (*drop)(struct Source *);
+}Source;
 
-struct utils{
+struct Utils{
     void (*ncpu) (_i *);
 
     void (*info) (const char *, const char * const, const _i, const char *const);
     void (*fatal) (const char *, const char * const, const _i, const char *const);
-    void (*display_errchain) (error_t *, const char * const, const _i, const char *const);
+    void (*display_errchain) (Error *, const char * const, const _i, const char *const);
 
     void (*msleep) (_i);
     _ui (*urand) (void);
-    void (*nng_drop) (source_t *);
-    void (*sys_drop) (source_t *);
-    void (*non_drop) (source_t *);
+    void (*nng_drop) (Source *);
+    void (*sys_drop) (Source *);
+    void (*non_drop) (Source *);
 
     void* (*alloc) (size_t, const char * const, const _i, const char *const);
     void * (*ralloc)(void *, size_t, const char * const, const _i, const char *const);
 };
 
 //For Error Print
-struct error_t{
+struct Error{
     int code;
     const char *desc;
-    struct error_t *cause;
+    struct Error *cause;
 
     const char *file;
     int line;
     const char *func;
 };
 
-#define __err_new(__code/*int*/, __desc/*str*/, __prev/*error_t_ptr*/) ({\
-    error_t *new = __alloc(sizeof(error_t));\
+#define __err_new(__code/*int*/, __desc/*str*/, __prev/*Error_ptr*/) ({\
+    Error *new = __alloc(sizeof(Error));\
     new->code = (__code);\
     new->desc = (__desc);\
     new->cause = (__prev);\
@@ -102,7 +99,7 @@ struct error_t{
 }while(0)
 
 #define __clean_errchain(__e) do{\
-    error_t *err = nil;\
+    Error *err = nil;\
     while(nil != __e){\
         err = __e;\
         __e = __e->cause;\

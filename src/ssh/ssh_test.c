@@ -13,7 +13,7 @@ _i cnter;
 static void *
 thread_safe_checker(void *_ __unuse){
     //async return, unless we waiting exit_status...
-    error_t *e = ssh.exec("sleep 20", nil, nil, "localhost", 22, _UNIT_TEST_USER, 10);
+    Error *e = ssh.exec("sleep 20", nil, nil, "localhost", 22, _UNIT_TEST_USER, 10);
     __clean_errchain(e);
 
     pthread_mutex_lock(&mlock);
@@ -25,9 +25,9 @@ thread_safe_checker(void *_ __unuse){
     return nil;
 }
 
-error_t *e = nil;
+Error *e = nil;
 _i exit_status = 0;
-source_t cmdout = {nil, 0, nil};
+Source cmdout = {nil, 0, nil};
 
 struct timespec tsp;
 time_t now;

@@ -4,14 +4,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-static error_t * new(nng_socket *sock);
-static error_t * listen(const char *self_id, nng_socket *sock);
-static error_t * dial(nng_socket sock, const char *remote_id);
+static Error * new(nng_socket *sock);
+static Error * listen(const char *self_id, nng_socket *sock);
+static Error * dial(nng_socket sock, const char *remote_id);
 
-static error_t * send(nng_socket sock, void *data, size_t data_len);
-static error_t * recv(nng_socket sock, source_t *s);
+static Error * send(nng_socket sock, void *data, size_t data_len);
+static Error * recv(nng_socket sock, Source *s);
 
-struct bus bus = {
+struct Bus bus = {
     .new = new,
     .listen = listen,
     .dial = dial,
@@ -20,7 +20,7 @@ struct bus bus = {
 };
 
 //@param sock[out]: created handler
-static error_t *
+static Error *
 new(nng_socket *sock){
     _i e = nng_bus0_open(sock);
     if (0 == e) {
@@ -32,7 +32,7 @@ new(nng_socket *sock){
 
 //@param self_id[in]: handler name
 //@param sock[in]:
-static error_t *
+static Error *
 listen(const char *self_id, nng_socket *sock){
     _i eno;
     nng_listener l;
@@ -55,7 +55,7 @@ listen(const char *self_id, nng_socket *sock){
 
 //@param id[in]: handler name
 //@param sock[in]:
-static error_t *
+static Error *
 dial(nng_socket sock, const char *remote_id){
     _i e = nng_dial(sock, remote_id, NULL, 0);
     if (0 == e) {
@@ -68,7 +68,7 @@ dial(nng_socket sock, const char *remote_id){
 //@param sock[in]: handler
 //@param data[in]: data to send
 //@param data_len[in]: len of data
-static error_t *
+static Error *
 send(nng_socket sock, void *data, size_t data_len){
     _i e = nng_send(sock, data, data_len, 0);
     if (0 != e) {
@@ -80,8 +80,8 @@ send(nng_socket sock, void *data, size_t data_len){
 //@param sock[in]: handler
 //@param data[out]: must call nng_free except given 'nil'
 //@param data_len[out]: actual len of recved data
-static error_t *
-recv(nng_socket sock, source_t *s){
+static Error *
+recv(nng_socket sock, Source *s){
     _i e;
     if(nil == s){
         //only for info purpose!

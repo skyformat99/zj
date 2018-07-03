@@ -1,4 +1,5 @@
 #include "utils.h"
+#include "http_cli.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,30 +9,28 @@
 #include "nng/nng.h"
 #include "nng/supplemental/http/http.h"
 
-#include "http_cli.h"
-
 #ifdef _OS_FREEBSD
 #include <limits.h>
 #endif
 
 #define __http_req_max_body_siz 1 * 1024 * 1024 //1MB
 
-__prm_nonnull static error_t *
-http_get(const char *urlstr, source_t *s, _i *status_code);
+__prm_nonnull static Error *
+http_get(const char *urlstr, Source *s, _i *status_code);
 
-__prm_nonnull static error_t *
-http_post(const char *urlstr, source_t *s, _i *status_code);
+__prm_nonnull static Error *
+http_post(const char *urlstr, Source *s, _i *status_code);
 
-__prm_nonnull static error_t *
-http_req(const char *urlstr, const char *method, source_t *s, _i *status_code);
+__prm_nonnull static Error *
+http_req(const char *urlstr, const char *method, Source *s, _i *status_code);
 
-struct http_cli httpcli = {
+struct HttpCli httpcli = {
     .get = http_get,
     .post = http_post,
     .req = http_req,
 };
 
-struct http_cli_flow{
+struct HttpCliFlow{
     nng_url *url;
     nng_http_req *req;
     nng_http_res *res;
@@ -42,7 +41,7 @@ struct http_cli_flow{
 };
 
 static void
-http_cli_flow_clean(struct http_cli_flow *c){
+HttpCliFlow_clean(struct HttpCliFlow *c){
     if(nil == c) return;
 
     if(nil != c->url) nng_url_free(c->url);
@@ -59,10 +58,10 @@ http_cli_flow_clean(struct http_cli_flow *c){
 //@param body[in, out]: in and out if POST, only out if GET
 //@param bsiz[in, out]: size of body
 //@param status_code[out]:http status, 200/400/500...
-static error_t *
-http_req(const char *urlstr, const char *method, source_t *s, _i *status_code){
-    __drop(http_cli_flow_clean)
-    struct http_cli_flow cl = { nil, nil, nil, nil, nil, nil };
+static Error *
+http_req(const char *urlstr, const char *method, Source *s, _i *status_code){
+    __drop(HttpCliFlow_clean)
+    struct HttpCliFlow cl = { nil, nil, nil, nil, nil, nil };
     _i rv = 0;
 
     s->drop = utils.non_drop;
@@ -144,12 +143,12 @@ http_req(const char *urlstr, const char *method, source_t *s, _i *status_code){
     return nil;
 }
 
-static error_t *
-http_get(const char *urlstr, source_t *s, _i *status_code){
+static Error *
+http_get(const char *urlstr, Source *s, _i *status_code){
     return http_req(urlstr, "GET", s, status_code);
 }
 
-static error_t *
-http_post(const char *urlstr, source_t *s, _i *status_code){
+static Error *
+http_post(const char *urlstr, Source *s, _i *status_code){
     return http_req(urlstr, "POST", s, status_code);
 }

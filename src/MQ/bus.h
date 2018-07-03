@@ -6,14 +6,14 @@
 
 #include "utils.h"
 
-struct bus{
-    error_t * (*new) (nng_socket *sock) __mustuse;
-    error_t * (*listen) (const char *self_id, nng_socket *sock) __prm_nonnull __mustuse;
-    error_t * (*dial) (nng_socket sock, const char *remote_id) __prm_nonnull __mustuse;
-    error_t * (*send) (nng_socket, void *, size_t) __prm_nonnull __mustuse;
-    error_t * (*recv) (nng_socket, source_t *) __mustuse;
+struct Bus{
+    Error * (*new) (nng_socket *sock) __mustuse;
+    Error * (*listen) (const char *self_id, nng_socket *sock) __prm_nonnull __mustuse;
+    Error * (*dial) (nng_socket sock, const char *remote_id) __prm_nonnull __mustuse;
+    Error * (*send) (nng_socket, void *, size_t) __prm_nonnull __mustuse;
+    Error * (*recv) (nng_socket, Source *) __mustuse;
 };
 
-struct bus bus;
+struct Bus bus;
 
 #endif //_BUS_H
