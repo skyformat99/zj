@@ -4,10 +4,7 @@
 #include <fcntl.h>
 #include <ftw.h>
 
-#include <sys/types.h>
-#include <sys/socket.h>
 #include <netdb.h>
-
 #ifdef _OS_FREEBSD
 #include <netinet/in.h>
 #endif
@@ -34,7 +31,7 @@
 #define __err_new_sys() __err_new(errno, strerror(errno), nil)
 
 static void daemonize(const char *runpath);
-static error_t *remove_all(char *path);
+static error_t *remove_all(char *path) __prm_nonnull;
 
 static error_t *set_nonblocking(_i fd);
 static error_t *set_blocking(_i fd);
@@ -47,10 +44,14 @@ inline static error_t *serv_listen(_i fd);
 
 static error_t *cli_connect(const char *addr, const char *port, _i *fd);
 
-inline static error_t *_send(_i fd, void *data, size_t data_siz);
-inline static error_t *connected_sendmsg(_i fd, struct iovec *vec, size_t vec_cnt);
-inline static error_t *_recv(_i fd, void *data, size_t data_siz);
-inline static error_t *recvall(_i fd, void *data, size_t data_siz);
+inline static error_t *_send(_i fd, void *data, size_t data_siz) __prm_nonnull;
+inline static error_t *connected_sendmsg(_i fd, struct iovec *vec, size_t vec_cnt) __prm_nonnull;
+inline static error_t *_recv(_i fd, void *data, size_t data_siz) __prm_nonnull;
+inline static error_t *recvall(_i fd, void *data, size_t data_siz) __prm_nonnull;
+
+static void fd_trans_init(struct fd_trans_env *env) __prm_nonnull;
+static error_t * send_fd(struct fd_trans_env *env, const _i unix_fd, const _i fd_to_send) __prm_nonnull;
+static error_t * recv_fd(struct fd_trans_env *env, const _i unix_fd, _i *fd_to_recv) __prm_nonnull;
 
 struct os os = {
     .daemonize = daemonize,
@@ -69,6 +70,10 @@ struct os os = {
     .sendmsg = connected_sendmsg,
     .recv = _recv,
     .recvall = recvall,
+
+    .fd_trans_init = fd_trans_init,
+    .send_fd = send_fd,
+    .recv_fd = recv_fd,
 };
 
 /**
@@ -426,16 +431,6 @@ connected_sendmsg(_i fd, struct iovec *vec, size_t vec_cnt){
 
     return nil;
 }
-
-//Can be used to impl multi process_mode server
-//MUST use helper macros to adapt variable os: CMSG_SPACE/CMSG_LEN/CMSG_DATA
-struct fd_trans_env{
-    struct msghdr msg;
-
-    //CMSG_SPACE(_): possiable max data len
-    char cmsgbuf[CMSG_SPACE(sizeof(_i))];
-    struct cmsghdr *cmsg;
-};
 
 //@param env[in, inner write out]
 static void
