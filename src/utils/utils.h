@@ -5,6 +5,9 @@
 
 #ifdef _OS_FREEBSD
 #define _WITH_DPRINTF //MUST define it before all 'stdio.h'
+#include <stdio.h>
+#include <stdlib.h>
+#include <malloc_np.h>
 #endif
 
 #ifdef _OS_LINUX
