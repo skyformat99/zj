@@ -61,10 +61,10 @@ exec_once_default(char *cmd, char *host, _i port, char *username) {
 }
 
 //**exec once, and disconnect**
-//@param host[in]: 
-//@param port[in]: 
-//@param username[in]: 
-//@param timeout_secs[in]: 
+//@param host[in]:
+//@param port[in]:
+//@param username[in]:
+//@param timeout_secs[in]:
 //@param exit_status[out]: the exit_status of `cmd`
 //@param cmdout[out]: the stdout and stderr output of `cmd`
 static Error *

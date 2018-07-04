@@ -470,7 +470,7 @@ fd_trans_init(struct FdTransEnv *env){
     //no trans flags
     env->msg.msg_flags = 0;
 
-    //easy to use 
+    //easy to use
     env->cmsg = env->msg.msg_control;
 
     env->cmsg->cmsg_level = SOL_SOCKET;

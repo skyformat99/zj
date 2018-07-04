@@ -224,7 +224,7 @@ typedef int (
     msg_appendentries_t* msg
     );
 
-/** 
+/**
  * Log compaction
  * Callback for telling the user to send a snapshot.
  *
@@ -820,7 +820,7 @@ int raft_get_first_entry_idx(raft_server_t* me_);
  * We need to send an appendentries response.
  *
  * @param[in] last_included_term Term of the last log of the snapshot
- * @param[in] last_included_index Index of the last log of the snapshot 
+ * @param[in] last_included_index Index of the last log of the snapshot
  *
  * @return
  *  0 on success
