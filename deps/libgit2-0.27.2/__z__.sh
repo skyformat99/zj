@@ -25,7 +25,7 @@ cmake\
     -DBUILD_SHARED_LIBS=ON\
     -DCMAKE_BUILD_TYPE=Release\
     -DBUILD_CLAR=OFF\
-    -DTHREADSAFE=OFF\
+    -DTHREADSAFE=ON\
     ..
 
 if [[ 0 -ne $? ]]; then
