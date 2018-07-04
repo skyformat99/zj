@@ -121,6 +121,12 @@ struct Error{
     exit(1);\
 }while(0)
 
+#define __check_nil(expr) do{\
+    if(!(expr)){\
+        return __err_new(-1, "param can't be nil");\
+    }\
+}while(0)
+
 #define __check_fatal(__e, __expr) do{\
     if(nil != ((__e) = (__expr))){\
         __display_and_fatal(__e);\
@@ -131,8 +137,16 @@ struct Error{
     utils.fatal((__msg), __FILE__, __LINE__, __func__);\
 }while(0)
 
+#define __fatal_sys() do{\
+    utils.fatal((strerror(errno)), __FILE__, __LINE__, __func__);\
+}while(0)
+
 #define __info(__msg) do{\
     utils.info((__msg), __FILE__, __LINE__, __func__);\
+}while(0)
+
+#define __info_sys() do{\
+    utils.info((strerror(errno)), __FILE__, __LINE__, __func__);\
 }while(0)
 
 // For Unit Tests

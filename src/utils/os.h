@@ -16,7 +16,7 @@ struct FdTransEnv{
 
 struct OS{
     void (*daemonize) (const char *);
-    Error *(* rm_all) (char *) __mustuse;
+    Error *(* rm_all) (const char *) __mustuse;
 
     Error *(*set_nonblocking) (_i) __mustuse;
     Error *(*set_blocking) (_i) __mustuse;

@@ -11,42 +11,39 @@ static Error *global_env_init(void) __mustuse;
 static void global_env_clean(void);
 
 static Error *repo_init(git_repository **hdr, const char *path) __prm_nonnull __mustuse;
-static void repo_free(git_repository *hdr) __prm_nonnull;
-
-static Error *info_config(char *repo_path, char *(*kv[2]), _i kv_n) __prm_nonnull __mustuse;
+static Error *info_config(char *(*kv[2]), _i kv_n) __prm_nonnull __mustuse;
 
 static Error *repo_open(git_repository **hdr, const char *addr) __prm_nonnull __mustuse;
 static void repo_close(git_repository *hdr) __prm_nonnull;
 
-static Error *clone(git_repository **hdr, char *repo_addr, char *local_path) __prm_nonnull __mustuse;
-static Error *fetch(git_repository *repo_hdr, char *addr, char **refs, _i refscnt) __prm_nonnull __mustuse;
-static Error *push(git_repository *repo_hdr, char *addr, char **refs, _i refscnt) __prm_nonnull __mustuse;
+static Error *clone(git_repository **hdr, const char *repo_addr, const char *local_path) __prm_nonnull __mustuse;
+static Error *fetch(git_repository *repo_hdr, const char *addr, char **refs, _i refscnt) __prm_nonnull __mustuse;
+static Error *push(git_repository *repo_hdr, const char *addr, char **refs, _i refscnt) __prm_nonnull __mustuse;
 
-static Error *create_branch_local(git_repository *repo_hdr, char *branch_name, char *base_rev) __prm_nonnull __mustuse;
-static Error *del_branch_local(git_repository *repo_hdr, char *branch_name) __prm_nonnull __mustuse;
-static Error *rename_branch_local(git_repository *repo_hdr, char *oldname, char *newname) __prm_nonnull __mustuse;
-static Error *switch_branch_local(git_repository *repo_hdr, char *branch_name) __prm_nonnull __mustuse;
+static Error *create_branch_local(git_repository *repo_hdr, const char *branch_name, const char *base_rev) __prm_nonnull __mustuse;
+static Error *del_branch_local(git_repository *repo_hdr, const char *branch_name) __prm_nonnull __mustuse;
+static Error *rename_branch_local(git_repository *repo_hdr, const char *oldname, const char *newname) __prm_nonnull __mustuse;
+static Error *switch_branch_local(git_repository *repo_hdr, const char *branch_name) __prm_nonnull __mustuse;
 
 static Error *branch_exists(git_repository *repo_hdr, const char *branch_name, _i *res) __prm_nonnull __mustuse;
 static Error *branch_is_head(git_repository *repo_hdr, const char *branch_name, _i *res) __prm_nonnull __mustuse;
 
-static Error * gen_walker(git_revwalk **walker, git_object **obj, git_repository *repo_hdr, char *ref, _i sort_mode) __prm_nonnull __mustuse;
+static Error * gen_walker(git_revwalk **walker, git_object **obj, git_repository *repo_hdr, const char *ref, _i sort_mode) __prm_nonnull __mustuse;
 static void walker_free(git_revwalk *walker, git_object *obj) __prm_nonnull;
 
-static Error *get_commit(git_commit **commit, char **revsig, git_repository *repo_hdr, git_revwalk *walker) __prm_nonnull __mustuse;
+static Error *get_commit(git_commit **commit, const char **revsig, git_repository *repo_hdr, git_revwalk *walker) __prm_nonnull __mustuse;
 static void commit_free(git_commit *commit) __prm_nonnull;
 
 static time_t get_commit_ts(git_commit *commit) __prm_nonnull;
 static const char * get_commit_msg(git_commit *commit) __prm_nonnull __mustuse;
 
-static Error *do_commit(git_repository *repo_hdr, char *branch_name, char *path, char *msg) __prm_nonnull __mustuse;
+static Error *do_commit(git_repository *repo_hdr, const char *branch_name, char *path, const char *msg) __prm_nonnull __mustuse;
 
 struct Git git = {
     .env_init = global_env_init,
     .env_clean = global_env_clean,
 
     .repo_init = repo_init,
-    .repo_free = repo_free,
 
     .config = info_config,
 
@@ -109,23 +106,14 @@ repo_init(git_repository **hdr, const char *path){
     return nil;
 }
 
-//@param hdr[in]:
-static void
-repo_free(git_repository *hdr){
-    git_repository_free(hdr);
-}
-
 //like：git config user.name "_". eg. ...
 //@param repo_path[in]:
 //@param kv[in]: key/value
 //@param kv_n[in]: cnt of kv
 static Error *
-info_config(char *repo_path, char *(*kv[2]), _i kv_n){
-    char confpath[strlen(repo_path) + sizeof("/.git/config")];
-    sprintf(confpath, "%s/.git/config", repo_path);
-
+info_config(char *(*kv[2]), _i kv_n){
     git_config *conf;
-    if(0 > git_config_open_ondisk(&conf, confpath)){
+    if(0 > git_config_open_default(&conf)){
         return __err_new_git();
     }
 
@@ -171,8 +159,7 @@ repo_close(git_repository *hdr){
 //@param allowed_types[in]:
 //@param payload[in]:
 static _i
-cred_cb(git_cred **cred, const char * username,
-        const char *url, unsigned int allowed_types, void * payload){
+cred_cb(git_cred **cred, const char * url, const char *username, unsigned int allowed_types, void * payload){
     (void)url;
     (void)allowed_types;
     (void)payload;
@@ -226,7 +213,7 @@ clone_cb(git_repository **hdr, const char *path,
 //@param repo_addr[in]: source repo url OR path
 //@param local_path[in]:
 static Error *
-clone(git_repository **hdr, char *repo_addr, char *local_path){
+clone(git_repository **hdr, const char *repo_addr, const char *local_path){
     git_clone_options opt; // = GIT_CLONE_OPTIONS_INIT;
     git_clone_init_options(&opt, GIT_CLONE_OPTIONS_VERSION);
 
@@ -255,7 +242,7 @@ git_remote_drop(git_remote **remote_hdr){
 //@param refs[in]: branchs to fetch
 //@param refscnt[in]: cnt of refs
 static Error *
-fetch(git_repository *repo_hdr, char *addr, char **refs, _i refscnt){
+fetch(git_repository *repo_hdr, const char *addr, char **refs, _i refscnt){
     __drop(git_remote_drop) git_remote* remote_hdr = nil;
 
     if(0 > git_remote_create_anonymous(&remote_hdr, repo_hdr, addr)){
@@ -276,11 +263,11 @@ fetch(git_repository *repo_hdr, char *addr, char **refs, _i refscnt){
     refs_array.strings = refs;
     refs_array.count = refscnt;
 
-    git_fetch_options zFetchOpts;  // = GIT_FETCH_OPTIONS_INIT;
-    git_fetch_init_options(&zFetchOpts, GIT_FETCH_OPTIONS_VERSION);
+    git_fetch_options opts;  // = GIT_FETCH_OPTIONS_INIT;
+    git_fetch_init_options(&opts, GIT_FETCH_OPTIONS_VERSION);
 
     //do the fetch
-    if(0 != git_remote_fetch(remote_hdr, &refs_array, &zFetchOpts, "fetch")){
+    if(0 > git_remote_fetch(remote_hdr, &refs_array, &opts, "fetch")){
         return __err_new_git();
     }
 
@@ -293,7 +280,7 @@ fetch(git_repository *repo_hdr, char *addr, char **refs, _i refscnt){
 //@param refs[in]: branchs to fetch
 //@param refscnt[in]: cnt of refs
 static Error *
-push(git_repository *repo_hdr, char *addr, char **refs, _i refscnt){
+push(git_repository *repo_hdr, const char *addr, char **refs, _i refscnt){
     __drop(git_remote_drop) git_remote* remote_hdr = nil;
 
     if(0 > git_remote_create_anonymous(&remote_hdr, repo_hdr, addr)){
@@ -372,7 +359,7 @@ branch_is_head(git_repository *repo_hdr, const char *branch_name, _i *res){
 //@param branch_name[in]: new branch name to create
 //@param base_rev[int]: "HEAD" OR refs/heads/<refname> OR sha1_str<40bytes + '\0'>
 static Error *
-create_branch_local(git_repository *repo_hdr, char *branch_name, char *base_rev){
+create_branch_local(git_repository *repo_hdr, const char *branch_name, const char *base_rev){
     git_reference *newbranch;
     git_commit *commit;
     git_oid baseoid;
@@ -412,7 +399,7 @@ create_branch_local(git_repository *repo_hdr, char *branch_name, char *base_rev)
 //@param repo_hdr[in]:
 //@param branch_name[in]: branch to delete
 static Error *
-del_branch_local(git_repository *repo_hdr, char *branch_name){
+del_branch_local(git_repository *repo_hdr, const char *branch_name){
     git_reference *branch;
     _i rv;
 
@@ -441,7 +428,7 @@ del_branch_local(git_repository *repo_hdr, char *branch_name){
 //@param oldname[in]: current branch name
 //@param newname[in]: new name for it
 static Error *
-rename_branch_local(git_repository *repo_hdr, char *oldname, char *newname){
+rename_branch_local(git_repository *repo_hdr, const char *oldname, const char *newname){
     git_reference *oldref;
     git_reference *newref;
 
@@ -466,7 +453,7 @@ rename_branch_local(git_repository *repo_hdr, char *oldname, char *newname){
 //@param repo_hdr[in]:
 //@param branch_name[in]: branch to switch to
 static Error *
-switch_branch_local(git_repository *repo_hdr, char *branch_name){
+switch_branch_local(git_repository *repo_hdr, const char *branch_name){
     git_reference *branch;
 
     if(0 > git_branch_lookup(&branch, repo_hdr, branch_name, GIT_BRANCH_LOCAL)){
@@ -505,7 +492,7 @@ walker_free(git_revwalk *walker, git_object *obj){
 //@param sort_mode[in]:
 static Error *
 gen_walker(git_revwalk **walker, git_object **obj,
-        git_repository *repo_hdr, char *ref, _i sort_mode){
+        git_repository *repo_hdr, const char *ref, _i sort_mode){
     if(0 > git_revwalk_new(walker, repo_hdr)){
         return __err_new_git();
     }
@@ -532,7 +519,7 @@ gen_walker(git_revwalk **walker, git_object **obj,
 //@param repo_hdr[in]:
 //@param walker[in]:
 static Error *
-get_commit(git_commit **commit, char **revsig,
+get_commit(git_commit **commit, const char **revsig,
         git_repository *repo_hdr, git_revwalk *walker){
     git_oid oid;
     _i rv;
@@ -582,7 +569,7 @@ commit_free(git_commit *commit){
  * @param msg[in]: user's commit msg
  */
 static Error *
-do_commit(git_repository *repo_hdr, char *branch_name, char *path, char *msg){
+do_commit(git_repository *repo_hdr, const char *branch_name, char *path, const char *msg){
     _i rv;
     struct stat s;
 
@@ -693,3 +680,4 @@ do_commit(git_repository *repo_hdr, char *branch_name, char *path, char *msg){
 
     return nil;
 }
+#undef __err_new_git

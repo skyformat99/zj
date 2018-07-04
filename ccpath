@@ -9,6 +9,7 @@
 -I ${HOME}/zj/src
 -I ${HOME}/zj/src/MQ
 -I ${HOME}/zj/src/http
+-I ${HOME}/zj/src/git
 -I ${HOME}/zj/src/ssh
 -I ${HOME}/zj/src/sha1
 -I ${HOME}/zj/src/threadpool

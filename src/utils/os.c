@@ -29,7 +29,7 @@
 #define __err_new_sys() __err_new(errno, strerror(errno), nil)
 
 static void daemonize(const char *runpath);
-static Error *remove_all(char *path) __prm_nonnull __mustuse;
+static Error *remove_all(const char *path) __prm_nonnull __mustuse;
 
 static Error *set_nonblocking(_i fd) __mustuse;
 static Error *set_blocking(_i fd) __mustuse;
@@ -139,7 +139,7 @@ remove_all_ctw_cb(const char *path, const struct stat *stat __unuse,
 }
 
 static Error *
-remove_all(char *path){
+remove_all(const char *path){
     if(0 != nftw(path, remove_all_ctw_cb, 128, FTW_PHYS/*ignore symlink*/|FTW_DEPTH/*file first*/)){
         return __err_new_sys();
     }

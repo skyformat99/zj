@@ -10,7 +10,7 @@ if [[ 0 -ne $? ]]; then
     exit 1
 fi
 
-sysld_path="-lpthread"
+sysld_path="-lpthread -lgit2"
 if [[ 0 -lt `uname -r|grep -c '^2.6.'` ]]; then
     sysld_path="-lpthread -lrt"
 fi
