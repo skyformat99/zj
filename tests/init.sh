@@ -11,7 +11,8 @@ perl -ane 'print "$F[1]:" if /^-L/' ${HOME}/zj/ccpath > /tmp/__z__ldpath
 echo "export LD_LIBRARY_PATH=`cat /tmp/__z__ldpath`." >> ~/.bashrc
 rm /tmp/__z__ldpath
 
-bash ~/.bashrc
+source ~/.bashrc
+source /etc/profile
 
 curdir=`pwd`
 
