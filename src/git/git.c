@@ -4,6 +4,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <errno.h>
 
 #define __err_new_git() __err_new(-1, nil == giterr_last() ? "error without message" : giterr_last()->message, nil)
 
@@ -187,7 +188,7 @@ fetch(git_repository *repo_hdr, char *addr, char **refs, _i refscnt){
         return __err_new_git();
     };
 
-    /* connect to remote */
+    //connect to remote
     git_remote_callbacks opt;  // = GIT_REMOTE_CALLBACKS_INIT;
     git_remote_init_callbacks(&opt, GIT_REMOTE_CALLBACKS_VERSION);
     opt.credentials = cred_cb;
@@ -203,7 +204,7 @@ fetch(git_repository *repo_hdr, char *addr, char **refs, _i refscnt){
     git_fetch_options zFetchOpts;  // = GIT_FETCH_OPTIONS_INIT;
     git_fetch_init_options(&zFetchOpts, GIT_FETCH_OPTIONS_VERSION);
 
-    /* do the fetch */
+    //do the fetch
     if(0 != git_remote_fetch(remote_hdr, &refs_array, &zFetchOpts, "fetch")){
         return __err_new_git();
     }
@@ -225,7 +226,7 @@ push(git_repository *repo_hdr, char *addr, char **refs, _i refscnt){
         return __err_new_git();
     };
 
-    /* connect to remote */
+    //connect to remote
     git_remote_callbacks opt;  // = GIT_REMOTE_CALLBACKS_INIT;
     git_remote_init_callbacks(&opt, GIT_REMOTE_CALLBACKS_VERSION);
     opt.credentials = cred_cb;
@@ -242,7 +243,7 @@ push(git_repository *repo_hdr, char *addr, char **refs, _i refscnt){
     git_push_init_options(&zPushOpts, GIT_PUSH_OPTIONS_VERSION);
     zPushOpts.pb_parallelism = 1; //max threads to use in one push_ops
 
-    /* do the push */
+    //do the push
     if(0 > git_remote_upload(remote_hdr, &refs_array, &zPushOpts)){
         return __err_new_git();
     }
@@ -257,12 +258,48 @@ push(git_repository *repo_hdr, char *addr, char **refs, _i refscnt){
  */
 
 //@param repo_hdr[in]:
+//@param branch_name[in]: branch name to check
+//@param res[out]: 0 for false, 1 for true
+static Error *
+branch_exists(git_repository *repo_hdr, const char *branch_name, _i *res){
+    git_reference *branch;
+    if(0 > (*res = git_branch_lookup(&branch, repo_hdr, branch_name, GIT_BRANCH_LOCAL))){
+        if(GIT_ENOTFOUND == *res){
+            *res = 0;
+            return nil;
+        }else{
+            return __err_new_git();
+        }
+    }
+
+    *res = 1;
+    return nil;
+}
+
+//@param repo_hdr[in]:
+//@param branch_name[in]: branch name to check
+//@param res[out]: 0 for false, 1 for true
+static Error *
+branch_is_head(git_repository *repo_hdr, const char *branch_name, _i *res){
+    git_reference *branch;
+    if(0 > (*res = git_branch_lookup(&branch, repo_hdr, branch_name, GIT_BRANCH_LOCAL))){
+        return __err_new_git();
+    }
+
+    if(0 > (*res = git_branch_is_head(branch))){
+        return __err_new_git();
+    }
+
+    return nil;
+}
+
+//@param repo_hdr[in]:
 //@param branch_name[in]: new branch name to create
 //@param base_rev[int]: "HEAD" OR nil OR refs/heads/<refname> OR sha1_str<40bytes + '\0'>
 static Error *
-add_branch_local(git_repository *repo_hdr, char *branch_name, char *base_rev){
-    git_reference *newbranch = nil;
-    git_commit *commit = nil;
+create_branch_local(git_repository *repo_hdr, char *branch_name, char *base_rev){
+    git_reference *newbranch;
+    git_commit *commit;
     git_oid baseoid;
 
     //get base_rev's oid
@@ -297,137 +334,83 @@ add_branch_local(git_repository *repo_hdr, char *branch_name, char *base_rev){
     return nil;
 }
 
+//@param repo_hdr[in]:
+//@param branch_name[in]: branch to delete
+static Error *
+del_branch_local(git_repository *repo_hdr, char *branch_name){
+    git_reference *branch;
+    _i rv;
 
-/*
- * [ TEST: PASS ]
- * 删除分支
- */
-static _i
-zgit_branch_del_local(git_repository *repo_hdr, char *branch_name){
-    git_reference *zpBranch = nil;
-
-    if(0 != git_branch_lookup(&zpBranch, repo_hdr, branch_name, GIT_BRANCH_LOCAL)){
-        zPRINT_ERR_EASY(nil == giterr_last() ? "Error without message" : giterr_last()->message);
-        return -1;
+    if(0 > (rv = git_branch_lookup(&branch, repo_hdr, branch_name, GIT_BRANCH_LOCAL))){
+        if(GIT_ENOTFOUND == rv){
+            return nil;
+        }else{
+            return __err_new_git();
+        }
     }
 
-    if(nil == zpBranch){
-        zPRINT_ERR_EASY(nil == giterr_last() ? "Error without message" : giterr_last()->message);
-        git_reference_free(zpBranch);
-        return -1;
+    if(nil == branch){
+        return __err_new_git();
     }
 
-    // if(git_branch_is_head(zpBranch)){
-    //     zPRINT_ERR_EASY("Delete HEAD will failed!");
-    //     git_reference_free(zpBranch);
-    //     return -1;
-    // }
-
-    if(0 != git_branch_delete(zpBranch)){
-        zPRINT_ERR_EASY(nil == giterr_last() ? "Error without message" : giterr_last()->message);
-        git_reference_free(zpBranch);
-        return -1;
+    if(0 > git_branch_delete(branch)){
+        git_reference_free(branch);
+        return __err_new_git();
     }
 
-    git_reference_free(zpBranch);
+    git_reference_free(branch);
+    return nil;
+}
 
+//@param repo_hdr[in]:
+//@param oldname[in]: current branch name
+//@param newname[in]: new name for it
+static Error *
+rename_branch_local(git_repository *repo_hdr, char *oldname, char *newname){
+    git_reference *oldref;
+    git_reference *newref;
+
+    if(0 > git_branch_lookup(&oldref, repo_hdr, oldname, GIT_BRANCH_LOCAL)){
+        return __err_new_git();
+    }
+
+    if(nil == oldref){
+        return __err_new_git();
+    }
+
+    if(0 >= git_branch_move(&newref, oldref, newname, 0)){
+        git_reference_free(oldref);
+        return __err_new_git();
+    }
+
+    git_reference_free(oldref);
+    git_reference_free(newref);
+    return nil;
+}
+
+//@param repo_hdr[in]:
+//@param branch_name[in]: branch to switch to
+static Error *
+switch_branch_local(git_repository *repo_hdr, char *branch_name){
+    git_reference *branch;
+
+    if(0 > git_branch_lookup(&branch, repo_hdr, branch_name, GIT_BRANCH_LOCAL)){
+        return __err_new_git();
+    }
+
+    if(nil == branch){
+        return __err_new_git();
+    }
+
+    if(0 > git_repository_set_head(repo_hdr, git_reference_name(branch))){
+        git_reference_free(branch);
+        return __err_new_git();
+    }
+
+    git_reference_free(branch);
     return 0;
 }
 
-
-/*
- * 分支改名
- */
-static _i
-zgit_branch_rename_local(git_repository *repo_hdr, char *zpOldName, char *zpNewName, zbool_t zForceMark){
-    git_reference *zpOld = nil;
-    git_reference *zpNew = nil;
-
-    if(0 != git_branch_lookup(&zpOld, repo_hdr, zpOldName, GIT_BRANCH_LOCAL)){
-        zPRINT_ERR_EASY(nil == giterr_last() ? "Error without message" : giterr_last()->message);
-        return -1;
-    }
-
-    if(nil == zpOld){
-        zPRINT_ERR_EASY(nil == giterr_last() ? "Error without message" : giterr_last()->message);
-        git_reference_free(zpOld);
-        return -1;
-    }
-
-    if(0 != git_branch_move(&zpNew, zpOld, zpNewName, zForceMark)){
-        zPRINT_ERR_EASY(nil == giterr_last() ? "Error without message" : giterr_last()->message);
-        git_reference_free(zpOld);
-        return -1;
-    }
-
-    git_reference_free(zpOld);
-    git_reference_free(zpNew);
-
-    return 0;
-}
-
-
-/*
- * 切换分支
- */
-static _i
-zgit_branch_switch_local(git_repository *repo_hdr, char *branch_name){
-    git_reference *zpBranch = nil;
-
-    if(0 != git_branch_lookup(&zpBranch, repo_hdr, branch_name, GIT_BRANCH_LOCAL)){
-        zPRINT_ERR_EASY(nil == giterr_last() ? "Error without message" : giterr_last()->message);
-        return -1;
-    }
-
-    if(nil == zpBranch){
-        zPRINT_ERR_EASY(nil == giterr_last() ? "Error without message" : giterr_last()->message);
-        git_reference_free(zpBranch);
-        return -1;
-    }
-
-    if(0 != git_repository_set_head(repo_hdr, git_reference_name(zpBranch))){
-        zPRINT_ERR_EASY(nil == giterr_last() ? "Error without message" : giterr_last()->message);
-        git_reference_free(zpBranch);
-        return -1;
-    }
-
-    git_reference_free(zpBranch);
-
-    return 0;
-}
-
-
-/*
- * 将所有本地分支名称写出到传入的 zpResBufOUT 中
- * zBufLen 指定可写出的缓冲区总大小
- * 分支总数写入到 zpResItemCnt 所指向的整数
- * 若缓冲区大小不足，写出的内容将会不完整，但分支数量将是完整的
- */
-static _i
-zgit_branch_list_local(git_repository *repo_hdr, char *zpResBufOUT, _i zBufLen, _i *zpResItemCnt){
-    git_branch_iterator *zpBranchIter = nil;
-    git_reference *zpTmpBranch = nil;
-    git_branch_t zBranchTypeOUT;
-    const char *branch_name = nil;
-
-    if(0 != git_branch_iterator_new(&zpBranchIter, repo_hdr, GIT_BRANCH_LOCAL)){
-        zPRINT_ERR_EASY(nil == giterr_last() ? "Error without message" : giterr_last()->message);
-        return -1;
-    }
-
-    _i zOffSet = 0;
-    while (GIT_ITEROVER != git_branch_next(&zpTmpBranch, &zBranchTypeOUT, zpBranchIter)
-            && zOffSet < zBufLen){
-        (* zpResItemCnt)++;
-
-        git_branch_name(&branch_name, zpTmpBranch);  /* 迭代出的分支信息不会出错，此处不必检查返回值 */
-        zOffSet += snprintf(zpResBufOUT + zOffSet + 1, zBufLen - zOffSet - 1, "%s", branch_name);
-    }
-
-    git_branch_iterator_free(zpBranchIter);
-
-    return 0;
-}
 /*
  * **************
  * Commit Management
@@ -512,144 +495,126 @@ free_commit(git_commit *commit){
 }
 
 /*
- * [ TEST: PASS ]
- * 提交文件至指定分支
- * 若分支不存在，将基于当前 HEAD 自动创建一个新分支
- * [@] 路径名称必须是相对于 git 库根路径的
- * @param zpRefName 除非使用 “HEAD”，否则其名称必须完整，如：refs/heads/xxx
- *
- * 功能等同于如下命令的组合：
+ * **used to add a path OR a single file**
+ * act as shell cmds：
  *     git config user.name _
  *     && git config user.email _
- *     && git add --all /PATH
+ *     && git add $path
  *     && git commit --allow-empty -m "_"
+ * @param repo_hdr[in]:
+ * @param branch_name[in]: refs/heads/xxx
+ * @param path[in]:
+ * @param msg[in]: user's commit msg
  */
-static _i
-zgit_add_and_commit(git_repository *repo_hdr,
-        char *zpRefName,
-        char *zpPath,
-        char *zpMsg){
+static Error *
+zgit_add_and_commit(git_repository *repo_hdr, char *branch_name, char *path, char *msg){
+    _i rv;
+    struct stat s;
 
-    _i rv = 0;
-    struct stat zS_;
-    zCHECK_NEGATIVE_RETURN(stat(zpPath, &zS_), -1);
+    git_index* index;
+    git_commit *parent_commit;
 
-    git_index* zpIndex = nil;
+    git_tree *tree;
+    git_oid tree_oid;
+    git_oid parent_oid;
 
-    git_commit *zpParentCommit = nil;
+    _i parent_cnt;
+    const git_commit *parent_commits[1];
 
-    git_oid zTreeOid;
-    git_tree *zpTree = nil;
+    git_signature *me = nil;
+    git_oid commit_oid;
 
-    git_oid zParentOid;
-    const git_commit *zppParentCommit[1] = { nil };
-    _i zParentCnt = 0;
-
-    git_signature *zpMe = nil;
-
-    git_oid zCommitOid;
-
-    /* get index */
-    if(0 != git_repository_index(&zpIndex, repo_hdr)){
-        zPRINT_ERR_EASY(nil == giterr_last() ? "Error without message" : giterr_last()->message);
-        return -1;
+    //get index
+    if(0 > git_repository_index(&index, repo_hdr)){
+		return __err_new_git();
     }
 
-    /* git add file */
-    if(S_ISDIR(zS_.st_mode)){
-        git_strarray zPaths;
-        zPaths.strings = &zpPath;
-        zPaths.count = 1;
+    //git add file
+	if(0 > stat(path, &s)){
+		return __err_new(errno, strerror(errno), nil);
+	}
+    if(S_ISDIR(s.st_mode)){
+        git_strarray paths;
+        paths.strings = &path;
+        paths.count = 1;
 
-        rv = git_index_add_all(zpIndex, &zPaths, GIT_INDEX_ADD_FORCE, nil, nil);
+        rv = git_index_add_all(index, &paths, GIT_INDEX_ADD_FORCE, nil, nil);
     }else{
-        rv = git_index_add_bypath(zpIndex, zpPath);
+        rv = git_index_add_bypath(index, path);
+    }
+    if(0 > rv){
+        git_index_free(index);
+		return __err_new_git();
     }
 
-    if(0 != rv){
-        zPRINT_ERR_EASY(nil == giterr_last() ? "Error without message" : giterr_last()->message);
-        git_index_free(zpIndex);
-        return -1;
+    //Write the in-memory index to disk
+    if(0 > git_index_write(index)){
+        git_index_free(index);
+		return __err_new_git();
     }
 
-    /* Write the in-memory index to disk */
-    if(0 != git_index_write(zpIndex)){
-        zPRINT_ERR_EASY(nil == giterr_last() ? "Error without message" : giterr_last()->message);
-        git_index_free(zpIndex);
-        return -1;
-    }
-
-    /*
-     * 获取父节点的 CommitOid
-     * 无父节点将以指定的 RefName 创建新分支
-     */
-    if(0 == (rv = git_reference_name_to_id(&zParentOid, repo_hdr, zpRefName))){
-        if(0 != git_commit_lookup(&zpParentCommit, repo_hdr, &zParentOid)){
-            zPRINT_ERR_EASY(nil == giterr_last() ? "Error without message" : giterr_last()->message);
-            git_index_free(zpIndex);
-            return -1;
+    //get parent's commit_oid, OR create a new branch
+    if(0 == (rv = git_reference_name_to_id(&parent_oid, repo_hdr, branch_name))){
+        if(0 > git_commit_lookup(&parent_commit, repo_hdr, &parent_oid)){
+            git_index_free(index);
+			return __err_new_git();
         }
 
-        zParentCnt = 1;
-        zppParentCommit[0] = zpParentCommit;
+        parent_cnt = 1;
+        parent_commits[0] = parent_commit;
     }else if(GIT_ENOTFOUND == rv){
-        /* branch not exist(will be created), do nothing... */
+        //branch not exist(will be created), do nothing...
     }else{
-        zPRINT_ERR_EASY(nil == giterr_last() ? "Error without message" : giterr_last()->message);
-        git_index_free(zpIndex);
-        return -1;
+        git_index_free(index);
+		return __err_new_git();
     }
 
-    /* 以提交到工作区的内容，创建一棵子树，并写出 TreeOid */
-    if(0 != git_index_write_tree(&zTreeOid, zpIndex)){
-        zPRINT_ERR_EASY(nil == giterr_last() ? "Error without message" : giterr_last()->message);
-        if(nil != zpParentCommit){
-            git_commit_free(zpParentCommit);
+    //commit to work_area, and create a subtree, and write tree_oid out
+    if(0 > git_index_write_tree(&tree_oid, index)){
+        if(nil != parent_commit){
+            git_commit_free(parent_commit);
         }
-        git_index_free(zpIndex);
-        return -1;
+        git_index_free(index);
+		return __err_new_git();
     }
 
-    /* 以生成的 TreeOid 找出对应的树对象 */
-    if(0 != git_tree_lookup(&zpTree, repo_hdr, &zTreeOid)){
-        zPRINT_ERR_EASY(nil == giterr_last() ? "Error without message" : giterr_last()->message);
-        if(nil != zpParentCommit){
-            git_commit_free(zpParentCommit);
+    //look up tree by tree_oid
+    if(0 > git_tree_lookup(&tree, repo_hdr, &tree_oid)){
+        if(nil != parent_commit){
+            git_commit_free(parent_commit);
         }
-        git_index_free(zpIndex);
-        return -1;
+        git_index_free(index);
+		return __err_new_git();
     }
 
-    /* 生成临时签名 */
-    if(0 != git_signature_now(&zpMe, "_", "_@_")){
-        zPRINT_ERR_EASY(nil == giterr_last() ? "Error without message" : giterr_last()->message);
-        git_tree_free(zpTree);
-        if(nil != zpParentCommit){
-            git_commit_free(zpParentCommit);
+	//config temp info
+    if(0 > git_signature_now(&me, "_", "_")){
+        git_tree_free(tree);
+        if(nil != parent_commit){
+            git_commit_free(parent_commit);
         }
-        git_index_free(zpIndex);
-        return -1;
+        git_index_free(index);
+		return __err_new_git();
     }
 
-    /* 将新生成的树对象、父节点 CommitID 联系起来，写到库中 */
-    if(0 != git_commit_create(&zCommitOid, repo_hdr, zpRefName, zpMe, zpMe, "UTF-8", zpMsg, zpTree, zParentCnt, zppParentCommit)){
-        zPRINT_ERR_EASY(nil == giterr_last() ? "Error without message" : giterr_last()->message);
-        git_signature_free(zpMe);
-        git_tree_free(zpTree);
-        if(nil != zpParentCommit){
-            git_commit_free(zpParentCommit);
+    //associate newly created tree and parent_commits, write to disk
+    if(0 > git_commit_create(&commit_oid, repo_hdr, branch_name, me, me, "UTF-8", msg, tree, parent_cnt, parent_commits)){
+        git_signature_free(me);
+        git_tree_free(tree);
+        if(nil != parent_commit){
+            git_commit_free(parent_commit);
         }
-        git_index_free(zpIndex);
-        return -1;
+        git_index_free(index);
+		return __err_new_git();
     }
 
-    /* clean... */
-    git_index_free(zpIndex);
-    if(nil != zpParentCommit){
-        git_commit_free(zpParentCommit);
+    //final: clean...
+    git_index_free(index);
+    if(nil != parent_commit){
+        git_commit_free(parent_commit);
     }
-    git_tree_free(zpTree);
-    git_signature_free(zpMe);
+    git_tree_free(tree);
+    git_signature_free(me);
 
-    return 0;
+    return nil;
 }
