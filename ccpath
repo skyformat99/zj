@@ -14,3 +14,4 @@
 -I ${HOME}/zj/src/threadpool
 -I ${HOME}/zj/src/utils
 -I ${HOME}/zj/src/raft
+-I ${HOME}/zj/src/regexp

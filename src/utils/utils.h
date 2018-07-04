@@ -3,20 +3,21 @@
 
 #include "env.h"
 
-#ifdef _OS_FREEBSD
-#define _WITH_DPRINTF //MUST define it before all 'stdio.h'
-#include <stdio.h>
+//memory alloc
 #include <stdlib.h>
+#ifdef _OS_FREEBSD
 #include <malloc_np.h>
 #endif
 
-#ifdef _OS_LINUX
+//log management
+//FreeBSD: MUST define it before all 'stdio.h'
+#define _WITH_DPRINTF
+#include <stdio.h>
 
+#ifdef _OS_LINUX
 #ifndef _XOPEN_SOURCE
 #define _XOPEN_SOURCE 700
-#define _DEFAULT_SOURCE
 #endif
-
 #endif
 
 #define __mustuse __attribute__ ((__warn_unused_result__));

@@ -1,5 +1,5 @@
-#ifndef _REGEX_H
-#define _REGEX_H
+#ifndef _REGEXP_H
+#define _REGEXP_H
 
 #include "utils.h"
 #include <regex.h>
