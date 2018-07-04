@@ -1,5 +1,4 @@
-#include "utils.h"
-#include "git2.h"
+#include "git.h"
 
 #include <string.h>
 #include <unistd.h>
@@ -7,6 +6,76 @@
 #include <errno.h>
 
 #define __err_new_git() __err_new(-1, nil == giterr_last() ? "error without message" : giterr_last()->message, nil)
+
+static Error *global_env_init(void) __mustuse;
+static void global_env_clean(void);
+
+static Error *repo_init(git_repository **hdr, const char *path) __prm_nonnull __mustuse;
+static void repo_free(git_repository *hdr) __prm_nonnull;
+
+static Error *info_config(char *repo_path, char *(*kv[2]), _i kv_n) __prm_nonnull __mustuse;
+
+static Error *repo_open(git_repository **hdr, const char *addr) __prm_nonnull __mustuse;
+static void repo_close(git_repository *hdr) __prm_nonnull;
+
+static Error *clone(git_repository **hdr, char *repo_addr, char *local_path) __prm_nonnull __mustuse;
+static Error *fetch(git_repository *repo_hdr, char *addr, char **refs, _i refscnt) __prm_nonnull __mustuse;
+static Error *push(git_repository *repo_hdr, char *addr, char **refs, _i refscnt) __prm_nonnull __mustuse;
+
+static Error *create_branch_local(git_repository *repo_hdr, char *branch_name, char *base_rev) __prm_nonnull __mustuse;
+static Error *del_branch_local(git_repository *repo_hdr, char *branch_name) __prm_nonnull __mustuse;
+static Error *rename_branch_local(git_repository *repo_hdr, char *oldname, char *newname) __prm_nonnull __mustuse;
+static Error *switch_branch_local(git_repository *repo_hdr, char *branch_name) __prm_nonnull __mustuse;
+
+static Error *branch_exists(git_repository *repo_hdr, const char *branch_name, _i *res) __prm_nonnull __mustuse;
+static Error *branch_is_head(git_repository *repo_hdr, const char *branch_name, _i *res) __prm_nonnull __mustuse;
+
+static Error * gen_walker(git_revwalk **walker, git_object **obj, git_repository *repo_hdr, char *ref, _i sort_mode) __prm_nonnull __mustuse;
+static void walker_free(git_revwalk *walker, git_object *obj) __prm_nonnull;
+
+static Error *get_commit(git_commit **commit, char **revsig, git_repository *repo_hdr, git_revwalk *walker) __prm_nonnull __mustuse;
+static void commit_free(git_commit *commit) __prm_nonnull;
+
+static time_t get_commit_ts(git_commit *commit) __prm_nonnull;
+static const char * get_commit_msg(git_commit *commit) __prm_nonnull __mustuse;
+
+static Error *do_commit(git_repository *repo_hdr, char *branch_name, char *path, char *msg) __prm_nonnull __mustuse;
+
+struct Git git = {
+    .env_init = global_env_init,
+    .env_clean = global_env_clean,
+
+    .repo_init = repo_init,
+    .repo_free = repo_free,
+
+    .config = info_config,
+
+    .repo_open = repo_open,
+    .repo_close = repo_close,
+
+    .clone = clone,
+    .fetch = fetch,
+    .push = push,
+
+    .create_branch = create_branch_local,
+    .del_branch = del_branch_local,
+    .rename_branch = rename_branch_local,
+    .switch_branch = switch_branch_local,
+
+    .branch_exists = branch_exists,
+    .branch_is_head = branch_is_head,
+
+    .gen_walker = gen_walker,
+    .walker_free = walker_free,
+
+    .get_commit = get_commit,
+    .commit_free = commit_free,
+
+    .get_commit_ts = get_commit_ts,
+    .get_commit_msg = get_commit_msg,
+
+    .do_commit = do_commit,
+};
 
 /*
  * **************
@@ -22,7 +91,7 @@ global_env_init(void){
     return nil;
 }
 
-inline static void
+static void
 global_env_clean(void){
     git_libgit2_shutdown();
 }
@@ -38,6 +107,12 @@ repo_init(git_repository **hdr, const char *path){
         return __err_new_git();
     }
     return nil;
+}
+
+//@param hdr[in]:
+static void
+repo_free(git_repository *hdr){
+    git_repository_free(hdr);
 }
 
 //like：git config user.name "_". eg. ...
@@ -295,7 +370,7 @@ branch_is_head(git_repository *repo_hdr, const char *branch_name, _i *res){
 
 //@param repo_hdr[in]:
 //@param branch_name[in]: new branch name to create
-//@param base_rev[int]: "HEAD" OR nil OR refs/heads/<refname> OR sha1_str<40bytes + '\0'>
+//@param base_rev[int]: "HEAD" OR refs/heads/<refname> OR sha1_str<40bytes + '\0'>
 static Error *
 create_branch_local(git_repository *repo_hdr, char *branch_name, char *base_rev){
     git_reference *newbranch;
@@ -303,7 +378,7 @@ create_branch_local(git_repository *repo_hdr, char *branch_name, char *base_rev)
     git_oid baseoid;
 
     //get base_rev's oid
-    if(nil == base_rev || 0 == strcmp("HEAD", base_rev)){
+    if(0 == strcmp("HEAD", base_rev)){
         if(0 > git_reference_name_to_id(&baseoid, repo_hdr, "HEAD")){
             return __err_new_git();
         }
@@ -417,8 +492,8 @@ switch_branch_local(git_repository *repo_hdr, char *branch_name){
  * **************
  */
 
-inline static void
-free_walker(git_revwalk *walker, git_object *obj){
+static void
+walker_free(git_revwalk *walker, git_object *obj){
     git_object_free(obj);
     git_revwalk_free(walker);
 }
@@ -429,7 +504,7 @@ free_walker(git_revwalk *walker, git_object *obj){
 //@param ref[in]: usually a branch name
 //@param sort_mode[in]:
 static Error *
-get_walker(git_revwalk **walker, git_object **obj,
+gen_walker(git_revwalk **walker, git_object **obj,
         git_repository *repo_hdr, char *ref, _i sort_mode){
     if(0 > git_revwalk_new(walker, repo_hdr)){
         return __err_new_git();
@@ -440,11 +515,11 @@ get_walker(git_revwalk **walker, git_object **obj,
     git_revwalk_sorting(*walker, sort_mode);
 
     if(0 > git_revparse_single(obj, repo_hdr, ref)){
-        free_walker(*walker, *obj);
+        walker_free(*walker, *obj);
         return __err_new_git();
     }
     if(0 > git_revwalk_push(*walker, git_object_id(*obj))){
-        free_walker(*walker, *obj);
+        walker_free(*walker, *obj);
         return __err_new_git();
     }
 
@@ -457,7 +532,7 @@ get_walker(git_revwalk **walker, git_object **obj,
 //@param repo_hdr[in]:
 //@param walker[in]:
 static Error *
-get_one_commit(git_commit **commit, char **revsig,
+get_commit(git_commit **commit, char **revsig,
         git_repository *repo_hdr, git_revwalk *walker){
     git_oid oid;
     _i rv;
@@ -480,17 +555,17 @@ get_one_commit(git_commit **commit, char **revsig,
 }
 
 static time_t
-get_one_commit_ts(git_commit *commit){
+get_commit_ts(git_commit *commit){
     return git_commit_time(commit);
 }
 
 static const char *
-get_one_commit_msg(git_commit *commit){
+get_commit_msg(git_commit *commit){
     return git_commit_message_raw(commit);
 }
 
-inline static void
-free_commit(git_commit *commit){
+static void
+commit_free(git_commit *commit){
     git_commit_free(commit);
 }
 
@@ -507,7 +582,7 @@ free_commit(git_commit *commit){
  * @param msg[in]: user's commit msg
  */
 static Error *
-zgit_add_and_commit(git_repository *repo_hdr, char *branch_name, char *path, char *msg){
+do_commit(git_repository *repo_hdr, char *branch_name, char *path, char *msg){
     _i rv;
     struct stat s;
 
@@ -526,13 +601,13 @@ zgit_add_and_commit(git_repository *repo_hdr, char *branch_name, char *path, cha
 
     //get index
     if(0 > git_repository_index(&index, repo_hdr)){
-		return __err_new_git();
+        return __err_new_git();
     }
 
     //git add file
-	if(0 > stat(path, &s)){
-		return __err_new(errno, strerror(errno), nil);
-	}
+    if(0 > stat(path, &s)){
+        return __err_new(errno, strerror(errno), nil);
+    }
     if(S_ISDIR(s.st_mode)){
         git_strarray paths;
         paths.strings = &path;
@@ -544,20 +619,20 @@ zgit_add_and_commit(git_repository *repo_hdr, char *branch_name, char *path, cha
     }
     if(0 > rv){
         git_index_free(index);
-		return __err_new_git();
+        return __err_new_git();
     }
 
     //Write the in-memory index to disk
     if(0 > git_index_write(index)){
         git_index_free(index);
-		return __err_new_git();
+        return __err_new_git();
     }
 
     //get parent's commit_oid, OR create a new branch
     if(0 == (rv = git_reference_name_to_id(&parent_oid, repo_hdr, branch_name))){
         if(0 > git_commit_lookup(&parent_commit, repo_hdr, &parent_oid)){
             git_index_free(index);
-			return __err_new_git();
+            return __err_new_git();
         }
 
         parent_cnt = 1;
@@ -566,7 +641,7 @@ zgit_add_and_commit(git_repository *repo_hdr, char *branch_name, char *path, cha
         //branch not exist(will be created), do nothing...
     }else{
         git_index_free(index);
-		return __err_new_git();
+        return __err_new_git();
     }
 
     //commit to work_area, and create a subtree, and write tree_oid out
@@ -575,7 +650,7 @@ zgit_add_and_commit(git_repository *repo_hdr, char *branch_name, char *path, cha
             git_commit_free(parent_commit);
         }
         git_index_free(index);
-		return __err_new_git();
+        return __err_new_git();
     }
 
     //look up tree by tree_oid
@@ -584,17 +659,17 @@ zgit_add_and_commit(git_repository *repo_hdr, char *branch_name, char *path, cha
             git_commit_free(parent_commit);
         }
         git_index_free(index);
-		return __err_new_git();
+        return __err_new_git();
     }
 
-	//config temp info
+    //config temp info
     if(0 > git_signature_now(&me, "_", "_")){
         git_tree_free(tree);
         if(nil != parent_commit){
             git_commit_free(parent_commit);
         }
         git_index_free(index);
-		return __err_new_git();
+        return __err_new_git();
     }
 
     //associate newly created tree and parent_commits, write to disk
@@ -605,7 +680,7 @@ zgit_add_and_commit(git_repository *repo_hdr, char *branch_name, char *path, cha
             git_commit_free(parent_commit);
         }
         git_index_free(index);
-		return __err_new_git();
+        return __err_new_git();
     }
 
     //final: clean...
