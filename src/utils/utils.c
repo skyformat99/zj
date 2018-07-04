@@ -29,8 +29,8 @@ static void nng_drop(Source *restrict s);
 static void sys_drop(Source *restrict s);
 static void non_drop(Source *restrict s);
 
-static void *must_alloc(size_t siz, const char *const file, const _i line, const char *const func);
-static void *must_ralloc(void *orig, size_t newsiz, const char *const file, const _i line, const char *const func);
+static void *must_alloc(size_t siz, const char *const file, const _i line, const char *const func) __mustuse;
+static void *must_ralloc(void *orig, size_t newsiz, const char *const file, const _i line, const char *const func) __mustuse;
 
 struct Utils utils = {
     .ncpu = ncpu,

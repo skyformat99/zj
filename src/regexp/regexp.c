@@ -1,9 +1,9 @@
 #include "regexp.h"
 #include <string.h>
 
-static Error *reg_init(const char *pattern, regex_t *reghdr) __prm_nonnull;
+static Error *reg_init(const char *pattern, regex_t *reghdr) __prm_nonnull __mustuse;
 static void regresfree(struct RegexRes *final) __prm_nonnull;
-static Error * reg_match(const char *origstr, _i n, regex_t *reghdr, struct RegexRes *final) __prm_nonnull;
+static Error * reg_match(const char *origstr, _i n, regex_t *reghdr, struct RegexRes *final) __prm_nonnull __mustuse;
 
 struct Regexp regexp = {
     .init = reg_init,

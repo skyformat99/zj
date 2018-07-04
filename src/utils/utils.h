@@ -72,8 +72,8 @@ struct Utils{
     void (*sys_drop) (Source *);
     void (*non_drop) (Source *);
 
-    void* (*alloc) (size_t, const char * const, const _i, const char *const);
-    void * (*ralloc)(void *, size_t, const char * const, const _i, const char *const);
+    void* (*alloc) (size_t, const char * const, const _i, const char *const) __mustuse;
+    void * (*ralloc)(void *, size_t, const char * const, const _i, const char *const) __mustuse;
 };
 
 //For Error Print

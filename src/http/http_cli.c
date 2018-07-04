@@ -15,14 +15,9 @@
 
 #define __http_req_max_body_siz 1 * 1024 * 1024 //1MB
 
-__prm_nonnull static Error *
-http_get(const char *urlstr, Source *s, _i *status_code);
-
-__prm_nonnull static Error *
-http_post(const char *urlstr, Source *s, _i *status_code);
-
-__prm_nonnull static Error *
-http_req(const char *urlstr, const char *method, Source *s, _i *status_code);
+static Error *http_get(const char *urlstr, Source *s, _i *status_code) __prm_nonnull __mustuse;
+static Error *http_post(const char *urlstr, Source *s, _i *status_code) __prm_nonnull __mustuse;
+static Error *http_req(const char *urlstr, const char *method, Source *s, _i *status_code) __prm_nonnull __mustuse;
 
 struct HttpCli httpcli = {
     .get = http_get,

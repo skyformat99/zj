@@ -9,7 +9,7 @@ rm_all(void){
     _i fd;
     struct stat s;
 
-    os.rm_all("/tmp/_");
+    (void)os.rm_all("/tmp/_");
     mkdir("/tmp/_", 0700);
     mkdir("/tmp/_/a", 0700);
     mkdir("/tmp/_/a/b", 0700);

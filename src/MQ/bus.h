@@ -7,7 +7,7 @@
 #include "utils.h"
 
 struct Bus{
-    Error * (*new) (nng_socket *sock) __mustuse;
+    Error * (*new) (nng_socket *sock) __prm_nonnull __mustuse;
     Error * (*listen) (const char *self_id, nng_socket *sock) __prm_nonnull __mustuse;
     Error * (*dial) (nng_socket sock, const char *remote_id) __prm_nonnull __mustuse;
     Error * (*send) (nng_socket, void *, size_t) __prm_nonnull __mustuse;

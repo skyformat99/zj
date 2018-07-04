@@ -16,26 +16,26 @@ struct FdTransEnv{
 
 struct OS{
     void (*daemonize) (const char *);
-    Error *(* rm_all) (char *);
+    Error *(* rm_all) (char *) __mustuse;
 
-    Error *(*set_nonblocking) (_i);
-    Error *(*set_blocking) (_i);
+    Error *(*set_nonblocking) (_i) __mustuse;
+    Error *(*set_blocking) (_i) __mustuse;
 
-    Error *(*socket_new) (const char *, const char *, _i *);
-    Error *(*ip_socket_new) (const char *, const char *, _i *) __prm_nonnull;
-    Error *(*unix_socket_new) (const char *, _i *) __prm_nonnull;
+    Error *(*socket_new) (const char *, const char *, _i *) __mustuse;
+    Error *(*ip_socket_new) (const char *, const char *, _i *) __prm_nonnull __mustuse;
+    Error *(*unix_socket_new) (const char *, _i *) __prm_nonnull __mustuse;
 
-    Error * (*listen) (_i);
+    Error * (*listen) (_i) __mustuse;
 
-    Error *(*connect) (const char *, const char *, _i *);
+    Error *(*connect) (const char *, const char *, _i *) __mustuse;
 
-    Error *(*send) (_i, void *, ssize_t);
-    Error *(*sendmsg) (_i, struct iovec *, size_t);
-    Error *(*recv) (_i, void *, size_t);
+    Error *(*send) (_i, void *, ssize_t) __mustuse;
+    Error *(*sendmsg) (_i, struct iovec *, size_t) __mustuse;
+    Error *(*recv) (_i, void *, size_t) __mustuse;
 
     void (*fd_trans_init) (struct FdTransEnv *);
-    Error *(*send_fd) (struct FdTransEnv *, const _i, const _i);
-    Error *(*recv_fd) (struct FdTransEnv *, const _i, _i *);
+    Error *(*send_fd) (struct FdTransEnv *, const _i, const _i) __mustuse;
+    Error *(*recv_fd) (struct FdTransEnv *, const _i, _i *) __mustuse;
 };
 
 struct OS os;

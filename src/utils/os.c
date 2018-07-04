@@ -29,26 +29,26 @@
 #define __err_new_sys() __err_new(errno, strerror(errno), nil)
 
 static void daemonize(const char *runpath);
-static Error *remove_all(char *path) __prm_nonnull;
+static Error *remove_all(char *path) __prm_nonnull __mustuse;
 
-static Error *set_nonblocking(_i fd);
-static Error *set_blocking(_i fd);
+static Error *set_nonblocking(_i fd) __mustuse;
+static Error *set_blocking(_i fd) __mustuse;
 
-static Error *socket_new(const char *addr, const char *port, _i *fd);
-static Error *ip_socket_new(const char *addr, const char *port, _i *fd) __prm_nonnull;
-static Error *unix_socket_new(const char *path, _i *fd) __prm_nonnull;
+static Error *socket_new(const char *addr, const char *port, _i *fd) __mustuse;
+static Error *ip_socket_new(const char *addr, const char *port, _i *fd) __prm_nonnull __mustuse;
+static Error *unix_socket_new(const char *path, _i *fd) __prm_nonnull __mustuse;
 
-inline static Error *serv_listen(_i fd);
+inline static Error *serv_listen(_i fd) __mustuse;
 
-static Error *cli_connect(const char *addr, const char *port, _i *fd);
+static Error *cli_connect(const char *addr, const char *port, _i *fd) __mustuse;
 
-inline static Error *_send(_i fd, void *data, ssize_t data_siz) __prm_nonnull;
-inline static Error *connected_sendmsg(_i fd, struct iovec *vec, size_t vec_cnt) __prm_nonnull;
-inline static Error *_recv(_i fd, void *data, size_t data_siz) __prm_nonnull;
+inline static Error *_send(_i fd, void *data, ssize_t data_siz) __prm_nonnull __mustuse;
+inline static Error *connected_sendmsg(_i fd, struct iovec *vec, size_t vec_cnt) __prm_nonnull __mustuse;
+inline static Error *_recv(_i fd, void *data, size_t data_siz) __prm_nonnull __mustuse;
 
 static void fd_trans_init(struct FdTransEnv *env) __prm_nonnull;
-static Error * send_fd(struct FdTransEnv *env, const _i unix_fd, const _i fd_to_send) __prm_nonnull;
-static Error * recv_fd(struct FdTransEnv *env, const _i unix_fd, _i *fd_to_recv) __prm_nonnull;
+static Error * send_fd(struct FdTransEnv *env, const _i unix_fd, const _i fd_to_send) __prm_nonnull __mustuse;
+static Error * recv_fd(struct FdTransEnv *env, const _i unix_fd, _i *fd_to_recv) __prm_nonnull __mustuse;
 
 struct OS os = {
     .daemonize = daemonize,
