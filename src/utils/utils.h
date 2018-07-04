@@ -3,10 +3,10 @@
 
 #include "env.h"
 
-//memory alloc
-#include <stdlib.h>
-#ifdef _OS_FREEBSD
-#include <malloc_np.h>
+#ifdef _OS_LINUX
+#ifndef _XOPEN_SOURCE
+#define _XOPEN_SOURCE 700
+#endif
 #endif
 
 //log management
@@ -14,10 +14,10 @@
 #define _WITH_DPRINTF
 #include <stdio.h>
 
-#ifdef _OS_LINUX
-#ifndef _XOPEN_SOURCE
-#define _XOPEN_SOURCE 700
-#endif
+//memory alloc
+#include <stdlib.h>
+#ifdef _OS_FREEBSD
+#include <malloc_np.h>
 #endif
 
 #define __mustuse __attribute__ ((__warn_unused_result__));
