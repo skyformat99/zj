@@ -117,6 +117,50 @@ _fetch(void){
     __check_fatal(e, git.fetch(repo_hdr2, repo_url, rmbranch, 1));
 }
 
+void
+log_walker(void){
+    Error *e;
+    git_revwalk *walker;
+    git_object *obj;
+
+    git_commit *commit;
+    const char *revsig;
+
+    __check_fatal(e, git.gen_walker(&walker, &obj, repo_hdr2, "refs/heads/master", 0));
+
+    __check_fatal(e, git.get_commit(&commit, &revsig, repo_hdr2, walker));
+    SoLt(0, printf("revsig: %s, ts: %ld, msg: %s\n", revsig, git.get_commit_ts(commit), git.get_commit_msg(commit)));
+    git.commit_free(commit);
+
+    __check_fatal(e, git.get_commit(&commit, &revsig, repo_hdr2, walker));
+    SoLt(0, printf("revsig: %s, ts: %ld, msg: %s\n", revsig, git.get_commit_ts(commit), git.get_commit_msg(commit)));
+    git.commit_free(commit);
+
+    __check_fatal(e, git.get_commit(&commit, &revsig, repo_hdr2, walker));
+    SoLt(0, printf("revsig: %s, ts: %ld, msg: %s\n", revsig, git.get_commit_ts(commit), git.get_commit_msg(commit)));
+    git.commit_free(commit);
+
+    revwalker_free(walker, obj);
+}
+
+void
+branch_mgmt(void){
+    Error *e;
+    _bool rv;
+
+    __check_fatal(e, git.create_branch(repo_hdr2, "new01", "refs/heads/master"));
+    __check_fatal(e, git.rename_branch(repo_hdr2, "new01", "new02"));
+    __check_fatal(e, git.switch_branch(repo_hdr2, "new02"));
+    __check_fatal(e, git.del_branch(repo_hdr2, "master"));
+
+    __check_fatal(e, git.branch_exists(repo_hdr2, "master", &rv));
+    So(0, rv);
+    __check_fatal(e, git.branch_exists(repo_hdr2, "new02", &rv));
+    So(1, rv);
+    __check_fatal(e, git.branch_is_head(repo_hdr2, "new02", &rv));
+    So(1, rv);
+}
+
 _i
 main(void){
     (void)os.rm_all(repo_path);
@@ -153,11 +197,15 @@ main(void){
         sem_wait(sem[0]);
         _fetch();
 
+        log_walker();
+        branch_mgmt();
+
         git.repo_close(repo_hdr2);
         git.env_clean();
 
         sem_close(sem[0]);
         sem_close(sem[1]);
+
         waitpid(pid, nil, 0);
     }else{
         _env_init();

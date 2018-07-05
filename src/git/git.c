@@ -1,7 +1,10 @@
 /*
  * libgit2 库特点：
- *   其错误信息是混乱不可靠的，出现问题查看源码
- *   其接口入参，都会检查空值，调用时可不必重复检查
+ *   - 其错误信息是混乱不可靠的，出现问题查看源码
+ *   - 其接口入参，都会检查空值，调用时可不必重复检查
+ *   - 本地推送至远端 HEAD 所在分支，会静默失败
+ *   - 拉取远端内容至本地 HEAD 所在分支，会强制覆盖
+ *   - **所有的分支管理函数，其 branchname 参数均不带 'refs/heads' 前缀
  */
 #include "git.h"
 
@@ -109,7 +112,7 @@ static Error *
 repo_init(git_repository **hdr, const char *path){
     __check_nil(hdr&&path);
     _i rv;
-    if(0 != (rv = git_repository_init(hdr, path, 0))){
+    if(0 > (rv = git_repository_init(hdr, path, 0))){
         return __err_new_git();
     }
     return nil;
@@ -123,13 +126,13 @@ static Error *
 info_config(char *(*kv[2]), _i kv_n){
     __check_nil(kv);
     git_config *conf;
-    if(0 != git_config_open_default(&conf)){
+    if(0 > git_config_open_default(&conf)){
         return __err_new_git();
     }
 
     _i i;
     for(i = 0; i< kv_n; ++i){
-        if(0 != git_config_set_string(conf, kv[i][0], kv[i][1])){
+        if(0 > git_config_set_string(conf, kv[i][0], kv[i][1])){
             git_config_free(conf);
             return __err_new_git();
         }
@@ -166,7 +169,7 @@ get_cfg(const char *key, char **value){
 static Error *
 repo_open(git_repository **hdr, const char *path){
     __check_nil(hdr&&path);
-    if(0 != git_repository_open(hdr, path)){
+    if(0 > git_repository_open(hdr, path)){
         *hdr = nil;
         return __err_new_git();
     }
@@ -214,7 +217,7 @@ cred_cb(git_cred **cred, const char *url, const char *username, unsigned int all
     sprintf(pubkey_path, "%s%s", home_path, "/.ssh/id_rsa.pub");
     sprintf(prvkey_path, "%s%s", home_path, "/.ssh/id_rsa");
 
-    if(0 != git_cred_ssh_key_new(cred, username, pubkey_path, prvkey_path, nil)){
+    if(0 > git_cred_ssh_key_new(cred, username, pubkey_path, prvkey_path, nil)){
         __info(nil == giterr_last() ? "error without message" : giterr_last()->message);
         return -1;
     }
@@ -254,7 +257,7 @@ clone(git_repository **hdr, const char *repo_addr, const char *local_path){
     opt.fetch_opts.callbacks.credentials = cred_cb;
     opt.repository_cb = clone_cb;
 
-    if(0 != git_clone(hdr, repo_addr, local_path, &opt)){
+    if(0 > git_clone(hdr, repo_addr, local_path, &opt)){
         return __err_new_git();
     }
 
@@ -277,8 +280,8 @@ fetch(git_repository *hdr, const char *url, char **refs, _i refscnt){
     __check_nil(hdr&&url&&refs);
     __drop(git_remote_drop) git_remote* remote = nil;
 
-    if(0 != git_remote_create_anonymous(&remote, hdr, url)){
-    //if(0 != git_remote_lookup(&remote, hdr, "origin")){ //call this func, when deal with named branch
+    if(0 > git_remote_create_anonymous(&remote, hdr, url)){
+    //if(0 > git_remote_lookup(&remote, hdr, "origin")){ //call this func, when deal with named branch
         return __err_new_git();
     };
 
@@ -293,7 +296,7 @@ fetch(git_repository *hdr, const char *url, char **refs, _i refscnt){
     fetch_opt.callbacks = remote_opt;
 
     //do the fetch
-    if(0 != git_remote_fetch(remote, &refs_array, &fetch_opt, nil)){
+    if(0 > git_remote_fetch(remote, &refs_array, &fetch_opt, nil)){
         return __err_new_git();
     }
 
@@ -311,8 +314,8 @@ push(git_repository *hdr, const char *url, char **refs, _i refscnt){
     __check_nil(hdr&&url&&refs);
     __drop(git_remote_drop) git_remote* remote = nil;
 
-    if(0 != git_remote_create_anonymous(&remote, hdr, url)){
-    //if(0 != git_remote_lookup(&remote, hdr, "origin")){ //call this func, when deal with named branch
+    if(0 > git_remote_create_anonymous(&remote, hdr, url)){
+    //if(0 > git_remote_lookup(&remote, hdr, "origin")){ //call this func, when deal with named branch
         return __err_new_git();
     };
 
@@ -328,7 +331,7 @@ push(git_repository *hdr, const char *url, char **refs, _i refscnt){
     push_opt.callbacks = remote_opt;
 
     //do the push
-    if(0 != git_remote_push(remote, &refs_array, &push_opt)){
+    if(0 > git_remote_push(remote, &refs_array, &push_opt)){
         return __err_new_git();
     }
 
@@ -348,7 +351,7 @@ static Error *
 branch_exists(git_repository *hdr, const char *branchname, _bool *res){
     __check_nil(hdr&&branchname&&res);
     git_reference *branch;
-    if(0 != (*res = git_branch_lookup(&branch, hdr, branchname, GIT_BRANCH_LOCAL))){
+    if(0 > (*res = git_branch_lookup(&branch, hdr, branchname, GIT_BRANCH_LOCAL))){
         if(GIT_ENOTFOUND == *res){
             *res = 0;
             return nil;
@@ -368,11 +371,12 @@ static Error *
 branch_is_head(git_repository *hdr, const char *branchname, _bool *res){
     __check_nil(hdr&&branchname&&res);
     git_reference *branch;
-    if(0 != (*res = git_branch_lookup(&branch, hdr, branchname, GIT_BRANCH_LOCAL))){
+    if(0 > (*res = git_branch_lookup(&branch, hdr, branchname, GIT_BRANCH_LOCAL))){
         return __err_new_git();
     }
 
-    if(0 != (*res = git_branch_is_head(branch))){
+    //return 0 if is NOT head, 1 if is head, or a value < 0
+    if(0 > (*res = git_branch_is_head(branch))){
         return __err_new_git();
     }
 
@@ -391,26 +395,26 @@ create_branch_local(git_repository *hdr, const char *branchname, const char *bas
 
     //get base_ref's oid
     if(0 == strcmp("HEAD", base_ref)){
-        if(0 != git_reference_name_to_id(&baseoid, hdr, "HEAD")){
+        if(0 > git_reference_name_to_id(&baseoid, hdr, "HEAD")){
             return __err_new_git();
         }
     }else if(0 == strncmp("refs/", base_ref, 5)){
-        if(0 != git_reference_name_to_id(&baseoid, hdr, base_ref)){
+        if(0 > git_reference_name_to_id(&baseoid, hdr, base_ref)){
             return __err_new_git();
         }
     }else{
-        if(0 != git_oid_fromstr(&baseoid, base_ref)){
+        if(0 > git_oid_fromstr(&baseoid, base_ref)){
             return __err_new_git();
         }
     }
 
     //get base_ref's last commit
-    if(0 != git_commit_lookup(&commit, hdr, &baseoid)){
+    if(0 > git_commit_lookup(&commit, hdr, &baseoid)){
         return __err_new_git();
     }
 
     //create new branch
-    if(0 != git_branch_create(&newbranch, hdr, branchname, commit, 0)){
+    if(0 > git_branch_create(&newbranch, hdr, branchname, commit, 0)){
         git_commit_free(commit);
         return __err_new_git();
     }
@@ -429,7 +433,7 @@ del_branch_local(git_repository *hdr, const char *branchname){
     git_reference *branch;
     _i rv;
 
-    if(0 != (rv = git_branch_lookup(&branch, hdr, branchname, GIT_BRANCH_LOCAL))){
+    if(0 > (rv = git_branch_lookup(&branch, hdr, branchname, GIT_BRANCH_LOCAL))){
         if(GIT_ENOTFOUND == rv){
             return nil;
         }else{
@@ -441,7 +445,7 @@ del_branch_local(git_repository *hdr, const char *branchname){
         return __err_new_git();
     }
 
-    if(0 != git_branch_delete(branch)){
+    if(0 > git_branch_delete(branch)){
         git_reference_free(branch);
         return __err_new_git();
     }
@@ -451,7 +455,7 @@ del_branch_local(git_repository *hdr, const char *branchname){
 }
 
 //@param hdr[in]:
-//@param oldname[in]: current branch name
+//@param oldname[in]: current branch name, **without prefix: 'refs/heads'**
 //@param newname[in]: new name for it
 static Error *
 rename_branch_local(git_repository *hdr, const char *oldname, const char *newname){
@@ -459,7 +463,7 @@ rename_branch_local(git_repository *hdr, const char *oldname, const char *newnam
     git_reference *oldref;
     git_reference *newref;
 
-    if(0 != git_branch_lookup(&oldref, hdr, oldname, GIT_BRANCH_LOCAL)){
+    if(0 > git_branch_lookup(&oldref, hdr, oldname, GIT_BRANCH_LOCAL)){
         return __err_new_git();
     }
 
@@ -467,7 +471,7 @@ rename_branch_local(git_repository *hdr, const char *oldname, const char *newnam
         return __err_new_git();
     }
 
-    if(0 != git_branch_move(&newref, oldref, newname, 0)){
+    if(0 > git_branch_move(&newref, oldref, newname, 0)){
         git_reference_free(oldref);
         return __err_new_git();
     }
@@ -484,16 +488,14 @@ switch_branch_local(git_repository *hdr, const char *branchname){
     __check_nil(hdr&&branchname);
 
     git_reference *branch;
-
-    if(0 != git_branch_lookup(&branch, hdr, branchname, GIT_BRANCH_LOCAL)){
+    if(0 > git_branch_lookup(&branch, hdr, branchname, GIT_BRANCH_LOCAL)){
         return __err_new_git();
     }
-
     if(nil == branch){
         return __err_new_git();
     }
 
-    if(0 != git_repository_set_head(hdr, git_reference_name(branch))){
+    if(0 > git_repository_set_head(hdr, git_reference_name(branch))){
         git_reference_free(branch);
         return __err_new_git();
     }
@@ -523,7 +525,7 @@ static Error *
 gen_walker(git_revwalk **revwalker, git_object **revobj, git_repository *hdr, const char *branchname, _i sort_mode){
     __check_nil(revwalker&&revobj&&hdr&&branchname);
 
-    if(0 != git_revwalk_new(revwalker, hdr)){
+    if(0 > git_revwalk_new(revwalker, hdr)){
         return __err_new_git();
     }
 
@@ -531,11 +533,11 @@ gen_walker(git_revwalk **revwalker, git_object **revobj, git_repository *hdr, co
     sort_mode = (0 == sort_mode) ? GIT_SORT_TIME : GIT_SORT_TIME|GIT_SORT_REVERSE;
     git_revwalk_sorting(*revwalker, sort_mode);
 
-    if(0 != git_revparse_single(revobj, hdr, branchname)){
+    if(0 > git_revparse_single(revobj, hdr, branchname)){
         revwalker_free(*revwalker, *revobj);
         return __err_new_git();
     }
-    if(0 != git_revwalk_push(*revwalker, git_object_id(*revobj))){
+    if(0 > git_revwalk_push(*revwalker, git_object_id(*revobj))){
         revwalker_free(*revwalker, *revobj);
         return __err_new_git();
     }
@@ -556,7 +558,7 @@ get_commit(git_commit **commit, const char **revsig, git_repository *hdr, git_re
 
     *revsig = nil;
     if(0 == (rv = git_revwalk_next(&oid, revwalker))){
-        if(0 != git_commit_lookup(commit, hdr, &oid)){
+        if(0 > git_commit_lookup(commit, hdr, &oid)){
             return __err_new_git();
         }else{
             //static memory space, per thread(when enable libgit2's THREADSAFE)
@@ -594,12 +596,12 @@ commit_free(git_commit *commit){
  *     && git add $path
  *     && git commit --allow-empty -m "_"
  * @param hdr[in]:
- * @param branchname[in]: refs/heads/xxx
+ * @param ref[in]: refs/heads/xxx
  * @param commit_msg[in]: user's commit msg
  */
 static Error *
-do_commit(git_repository *hdr, const char *branchname, const char *commit_msg){
-    __check_nil(hdr&&branchname&&commit_msg);
+do_commit(git_repository *hdr, const char *ref, const char *commit_msg){
+    __check_nil(hdr&&ref&&commit_msg);
     _i rv;
 
     git_index* index;
@@ -616,7 +618,7 @@ do_commit(git_repository *hdr, const char *branchname, const char *commit_msg){
     git_oid commit_oid;
 
     //get index
-    if(0 != git_repository_index(&index, hdr)){
+    if(0 > git_repository_index(&index, hdr)){
         return __err_new_git();
     }
 
@@ -628,20 +630,20 @@ do_commit(git_repository *hdr, const char *branchname, const char *commit_msg){
 
     rv = git_index_add_all(index, &paths, GIT_INDEX_ADD_FORCE, nil, nil);
 
-    if(0 != rv){
+    if(0 > rv){
         git_index_free(index);
         return __err_new_git();
     }
 
     //Write the in-memory index to disk
-    if(0 != git_index_write(index)){
+    if(0 > git_index_write(index)){
         git_index_free(index);
         return __err_new_git();
     }
 
     //get parent's commit_oid, OR create a new branch
-    if(0 == (rv = git_reference_name_to_id(&parent_oid, hdr, branchname))){
-        if(0 != git_commit_lookup(&parent_commit, hdr, &parent_oid)){
+    if(0 == (rv = git_reference_name_to_id(&parent_oid, hdr, ref))){
+        if(0 > git_commit_lookup(&parent_commit, hdr, &parent_oid)){
             git_index_free(index);
             return __err_new_git();
         }
@@ -658,7 +660,7 @@ do_commit(git_repository *hdr, const char *branchname, const char *commit_msg){
     }
 
     //commit to work_area, and create a subtree, and write tree_oid out
-    if(0 != git_index_write_tree(&tree_oid, index)){
+    if(0 > git_index_write_tree(&tree_oid, index)){
         if(nil != parent_commit){
             git_commit_free(parent_commit);
         }
@@ -667,7 +669,7 @@ do_commit(git_repository *hdr, const char *branchname, const char *commit_msg){
     }
 
     //look up tree by tree_oid
-    if(0 != git_tree_lookup(&tree, hdr, &tree_oid)){
+    if(0 > git_tree_lookup(&tree, hdr, &tree_oid)){
         if(nil != parent_commit){
             git_commit_free(parent_commit);
         }
@@ -676,7 +678,7 @@ do_commit(git_repository *hdr, const char *branchname, const char *commit_msg){
     }
 
     //config temp info
-    if(0 != git_signature_now(&me, "_", "_")){
+    if(0 > git_signature_now(&me, "_", "_")){
         git_tree_free(tree);
         if(nil != parent_commit){
             git_commit_free(parent_commit);
@@ -686,7 +688,7 @@ do_commit(git_repository *hdr, const char *branchname, const char *commit_msg){
     }
 
     //associate newly created tree and parent_commits, write to disk
-    if(0 != git_commit_create(&commit_oid, hdr, branchname, me, me, "UTF-8", commit_msg, tree, parent_cnt, parent_commits)){
+    if(0 > git_commit_create(&commit_oid, hdr, ref, me, me, "UTF-8", commit_msg, tree, parent_cnt, parent_commits)){
         git_signature_free(me);
         git_tree_free(tree);
         if(nil != parent_commit){
