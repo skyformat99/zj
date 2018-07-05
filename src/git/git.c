@@ -37,7 +37,7 @@ static void commit_free(git_commit *commit) __prm_nonnull;
 static time_t get_commit_ts(git_commit *commit) __prm_nonnull;
 static const char * get_commit_msg(git_commit *commit) __prm_nonnull __mustuse;
 
-static Error *do_commit(git_repository *repo_hdr, const char *branch_name, char *path, const char *msg) __prm_nonnull __mustuse;
+static Error *do_commit(git_repository *repo_hdr, const char *branch_name, const char *msg) __prm_nonnull __mustuse;
 
 struct Git git = {
     .env_init = global_env_init,
@@ -267,7 +267,7 @@ fetch(git_repository *repo_hdr, const char *addr, char **refs, _i refscnt){
     git_fetch_init_options(&opts, GIT_FETCH_OPTIONS_VERSION);
 
     //do the fetch
-    if(0 > git_remote_fetch(remote_hdr, &refs_array, &opts, "fetch")){
+    if(0 > git_remote_fetch(remote_hdr, &refs_array, &opts, nil)){
         return __err_new_git();
     }
 
@@ -301,12 +301,12 @@ push(git_repository *repo_hdr, const char *addr, char **refs, _i refscnt){
     refs_array.strings = refs;
     refs_array.count = refscnt;
 
-    git_push_options zPushOpts;  // = GIT_PUSH_OPTIONS_INIT;
-    git_push_init_options(&zPushOpts, GIT_PUSH_OPTIONS_VERSION);
-    zPushOpts.pb_parallelism = 1; //max threads to use in one push_ops
+    git_push_options opts;  // = GIT_PUSH_OPTIONS_INIT;
+    git_push_init_options(&opts, GIT_PUSH_OPTIONS_VERSION);
+    opts.pb_parallelism = 1; //max threads to use in one push_ops
 
     //do the push
-    if(0 > git_remote_upload(remote_hdr, &refs_array, &zPushOpts)){
+    if(0 > git_remote_upload(remote_hdr, &refs_array, &opts)){
         return __err_new_git();
     }
 
@@ -569,9 +569,8 @@ commit_free(git_commit *commit){
  * @param msg[in]: user's commit msg
  */
 static Error *
-do_commit(git_repository *repo_hdr, const char *branch_name, char *path, const char *msg){
+do_commit(git_repository *repo_hdr, const char *branch_name, const char *msg){
     _i rv;
-    struct stat s;
 
     git_index* index;
     git_commit *parent_commit;
@@ -583,7 +582,7 @@ do_commit(git_repository *repo_hdr, const char *branch_name, char *path, const c
     _i parent_cnt;
     const git_commit *parent_commits[1];
 
-    git_signature *me = nil;
+    git_signature *me;
     git_oid commit_oid;
 
     //get index
@@ -592,18 +591,13 @@ do_commit(git_repository *repo_hdr, const char *branch_name, char *path, const c
     }
 
     //git add file
-    if(0 > stat(path, &s)){
-        return __err_new(errno, strerror(errno), nil);
-    }
-    if(S_ISDIR(s.st_mode)){
-        git_strarray paths;
-        paths.strings = &path;
-        paths.count = 1;
+    static char *path[1] = {"*"};
+    git_strarray paths;
+    paths.strings = path;
+    paths.count = 1;
 
-        rv = git_index_add_all(index, &paths, GIT_INDEX_ADD_FORCE, nil, nil);
-    }else{
-        rv = git_index_add_bypath(index, path);
-    }
+    rv = git_index_add_all(index, &paths, GIT_INDEX_ADD_FORCE, nil, nil);
+
     if(0 > rv){
         git_index_free(index);
         return __err_new_git();
@@ -625,7 +619,9 @@ do_commit(git_repository *repo_hdr, const char *branch_name, char *path, const c
         parent_cnt = 1;
         parent_commits[0] = parent_commit;
     }else if(GIT_ENOTFOUND == rv){
-        //branch not exist(will be created), do nothing...
+        //branch not exist(will be auto created)
+        parent_commit = nil;
+        parent_cnt = 0;
     }else{
         git_index_free(index);
         return __err_new_git();

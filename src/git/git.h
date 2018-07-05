@@ -35,7 +35,7 @@ struct Git{
     time_t (*get_commit_ts) (git_commit *commit) __prm_nonnull;
     const char *(*get_commit_msg) (git_commit *commit) __prm_nonnull __mustuse;
 
-    Error *(*do_commit) (git_repository *repo_hdr, const char *branch_name, char *path, const char *msg) __prm_nonnull __mustuse;
+    Error *(*do_commit) (git_repository *repo_hdr, const char *branch_name, const char *msg) __prm_nonnull __mustuse;
 };
 
 struct Git git;

@@ -2,6 +2,7 @@
 #include "utils.c"
 #include "os.c"
 #include <fcntl.h>
+#include <sys/wait.h>
 
 #define __err_new_git() __err_new(-1, nil == giterr_last() ? "error without message" : giterr_last()->message, nil)
 
@@ -93,9 +94,9 @@ _clone(void){
 }
 
 void
-_do_commit(git_repository *hdr, char *path){
+_do_commit(git_repository *hdr){
     Error *e;
-    __check_fatal(e, git.do_commit(hdr, "refs/heads/master", path, "some commit msg"));
+    __check_fatal(e, git.do_commit(hdr, "refs/heads/master", "some commit msg"));
 }
 
 void
@@ -116,34 +117,42 @@ _i
 main(void){
     (void)os.rm_all(repo_path);
     (void)os.rm_all(repo_path2);
-    _mkdir_and_create_file(repo_path, "file");
 
-    _env_init();
-    _repo_init(&repo_hdr, repo_path);
-    _config_name_and_email();
+    pid_t pid = fork();
+    if(0 > pid){
+        __fatal_sys();
+    }else if(0 == pid){
+        _env_init();
 
-    _clone();
+        sleep(1);
+        _clone();
 
-    _repo_open(&repo_hdr, repo_path);
-    _repo_open(&repo_hdr2, repo_path2);
+        _mkdir_and_create_file(repo_path2, "fileX");
+        _repo_open(&repo_hdr2, repo_path2);
 
-    _do_commit(repo_hdr2, repo_path2);
-    _mkdir_and_create_file(repo_path2, "file2");
-    _do_commit(repo_hdr2, repo_path2);
+        _do_commit(repo_hdr2);
+        _push();
 
-    //_push();
+        _do_commit(repo_hdr2);
+        _push();
 
-    //_do_commit(repo_hdr, repo_path);
-    //_mkdir_and_create_file(repo_path, "file3");
-    //_do_commit(repo_hdr, repo_path);
+        git.repo_close(repo_hdr2);
+        git.env_clean();
+    }else{
+        _mkdir_and_create_file(repo_path, "file");
+        _mkdir_and_create_file(repo_path, "file1");
+        _mkdir_and_create_file(repo_path, "file2");
+        _mkdir_and_create_file(repo_path, "file3");
 
-    //_fetch();
+        _env_init();
 
+        _repo_init(&repo_hdr, repo_path);
+        _config_name_and_email();
+        _repo_open(&repo_hdr, repo_path);
+        _do_commit(repo_hdr);
+        git.repo_close(repo_hdr);
+        git.env_clean();
 
-
-
-
-    git.repo_close(repo_hdr);
-    git.repo_close(repo_hdr2);
-    git.env_clean();
+        waitpid(pid, nil, 0);
+    }
 }
