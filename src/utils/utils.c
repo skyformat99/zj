@@ -16,7 +16,7 @@
 #include "nng/nng.h"
 #include "nng/supplemental/util/platform.h"
 
-static void ncpu(_i *n) __prm_nonnull;
+static void ncpu(_i *n);
 
 static void print_time(void);
 static void info(const char *msg, const char *const file, const _i line, const char *const func);
@@ -58,6 +58,7 @@ panic(void){
 
 static void
 ncpu(_i *n){
+    __check_nil_fatal(n);
     if(0 > (*n = sysconf(_SC_NPROCESSORS_ONLN))){
         __info(strerror(errno));
         *n = 8;
@@ -183,7 +184,7 @@ info(const char *msg, const char *const file, const _i line, const char *const f
             "   ├── file: %s\n"
             "   ├── line: %d\n"
             "   └── func: %s\n",
-            msg,
+            nil == msg ? "" : msg,
             file,
             line,
             func);
@@ -198,7 +199,7 @@ fatal(const char *msg, const char *const file, const _i line, const char *const 
             "   ├── file: %s\n"
             "   ├── line: %d\n"
             "   └── func: %s\n",
-            msg,
+            nil == msg ? "" : msg,
             file,
             line,
             func);

@@ -16,8 +16,8 @@ static void nng_sha1_final(nng_sha1_ctx *, uint8_t[20]);
 
 static void nng_sha1(const void *, size_t, uint8_t[20]);
 
-static void sha1_lower_case(void *, size_t, char[41]);
-static Error * sha1_file_lower_case(char *filepath, char res[41]);
+static Error *sha1_lower_case(void *, size_t, char[41]);
+static Error *sha1_file_lower_case(char *filepath, char res[41]);
 
 struct SHA1 sha1 = {
     .init = nng_sha1_init,
@@ -224,8 +224,9 @@ nng_sha1_pad(nng_sha1_ctx *ctx){
     nng_sha1_process(ctx);
 }
 
-static void
+static Error *
 sha1_lower_case(void *src, size_t src_siz, char res[41]){
+    __check_nil(src);
     uint8_t r[20];
     nng_sha1(src, src_siz, r);
 
@@ -233,6 +234,8 @@ sha1_lower_case(void *src, size_t src_siz, char res[41]){
     for(; src_siz < 20; ++src_siz){
         sprintf(res + 2 * src_siz, "%02x", r[src_siz]);
     }
+
+    return nil;
 }
 
 //@param filepath[in]:
@@ -240,6 +243,7 @@ sha1_lower_case(void *src, size_t src_siz, char res[41]){
 //@param res[out]:
 static Error *
 sha1_file_lower_case(char *filepath, char res[41]){
+    __check_nil(filepath);
     uint8_t r[20];
     nng_sha1_ctx ctx;
 

@@ -29,26 +29,26 @@
 #define __err_new_sys() __err_new(errno, strerror(errno), nil)
 
 static void daemonize(const char *runpath);
-static Error *remove_all(const char *path) __prm_nonnull __mustuse;
+static Error *remove_all(const char *path) __mustuse;
 
 static Error *set_nonblocking(_i fd) __mustuse;
 static Error *set_blocking(_i fd) __mustuse;
 
 static Error *socket_new(const char *addr, const char *port, _i *fd) __mustuse;
-static Error *ip_socket_new(const char *addr, const char *port, _i *fd) __prm_nonnull __mustuse;
-static Error *unix_socket_new(const char *path, _i *fd) __prm_nonnull __mustuse;
+static Error *ip_socket_new(const char *addr, const char *port, _i *fd) __mustuse;
+static Error *unix_socket_new(const char *path, _i *fd) __mustuse;
 
 inline static Error *serv_listen(_i fd) __mustuse;
 
 static Error *cli_connect(const char *addr, const char *port, _i *fd) __mustuse;
 
-inline static Error *_send(_i fd, void *data, ssize_t data_siz) __prm_nonnull __mustuse;
-inline static Error *connected_sendmsg(_i fd, struct iovec *vec, size_t vec_cnt) __prm_nonnull __mustuse;
-inline static Error *_recv(_i fd, void *data, size_t data_siz) __prm_nonnull __mustuse;
+inline static Error *_send(_i fd, void *data, ssize_t data_siz) __mustuse;
+inline static Error *connected_sendmsg(_i fd, struct iovec *vec, size_t vec_cnt) __mustuse;
+inline static Error *_recv(_i fd, void *data, size_t data_siz) __mustuse;
 
 static void fd_trans_init(struct FdTransEnv *env) __prm_nonnull;
-static Error * send_fd(struct FdTransEnv *env, const _i unix_fd, const _i fd_to_send) __prm_nonnull __mustuse;
-static Error * recv_fd(struct FdTransEnv *env, const _i unix_fd, _i *fd_to_recv) __prm_nonnull __mustuse;
+static Error * send_fd(struct FdTransEnv *env, const _i unix_fd, const _i fd_to_send) __mustuse;
+static Error * recv_fd(struct FdTransEnv *env, const _i unix_fd, _i *fd_to_recv) __mustuse;
 
 struct OS os = {
     .daemonize = daemonize,
@@ -140,6 +140,7 @@ remove_all_ctw_cb(const char *path, const struct stat *stat __unuse,
 
 static Error *
 remove_all(const char *path){
+    __check_nil(path);
     if(0 != nftw(path, remove_all_ctw_cb, 128, FTW_PHYS/*ignore symlink*/|FTW_DEPTH/*file first*/)){
         return __err_new_sys();
     }
@@ -210,10 +211,7 @@ serv_listen(_i fd){
 //@param fd[in and out]: [in] used as bit mark, [out]: generated socket fd
 static Error *
 socket_new(const char *addr, const char *port, _i *fd){
-    if(!(addr && fd)){
-        return __err_new(-1, "param<addr, fd> can't be nil", nil);
-    }
-
+    __check_nil(addr&&fd);
     Error *e = nil;
 
     if(__check_bit(*fd, _UNIX_SOCKET_BIT_IDX)){
@@ -235,6 +233,7 @@ socket_new(const char *addr, const char *port, _i *fd){
 //@param fd[in and out]: [in] UDP if second_bit setted, or TCP; [out] ==> generated socket fd
 static Error *
 ip_socket_new(const char *addr, const char *port, _i *fd){
+    __check_nil(addr&&port&&fd);
     struct addrinfo hints_  = {
         .ai_flags = AI_PASSIVE|AI_NUMERICSERV,
         .ai_socktype = __check_bit(*fd, _PROTO_UDP_BIT_IDX) ? SOCK_DGRAM : SOCK_STREAM,
@@ -278,6 +277,7 @@ ip_socket_new(const char *addr, const char *port, _i *fd){
 //@param fd[in and out]: [in] UDP if second_bit setted, or TCP; [out] ==> generated socket fd
 static Error *
 unix_socket_new(const char *path, _i *fd){
+    __check_nil(path&&fd);
     struct sockaddr_un un = {
         .sun_family = AF_UNIX,
     };
@@ -308,6 +308,7 @@ unix_socket_new(const char *path, _i *fd){
 // poll return: 0 for timeout, 1 for success, -1 for error
 static Error *
 do_connect(_i fd, struct sockaddr *sockaddr, size_t siz){
+    __check_nil(sockaddr);
     Error *e = nil;
     if(nil == (e = set_nonblocking(fd))){
         if (0 == connect(fd, sockaddr, siz)){
@@ -348,10 +349,7 @@ do_connect(_i fd, struct sockaddr *sockaddr, size_t siz){
 //@param fd[in and out]: [in] used as bit mark, [out]: connected fd
 static Error *
 cli_connect(const char *addr, const char *port, _i *fd){
-    if(!(addr && fd)){
-        return __err_new(-1, "param<addr, fd> can't be nil", nil);
-    }
-
+    __check_nil(addr&&fd);
     _i rv;
     _i socksiz;
     _i socktype;
@@ -413,6 +411,7 @@ cli_connect(const char *addr, const char *port, _i *fd){
 
 static Error *
 _recv(_i fd, void *data, size_t data_siz){
+    __check_nil(data);
     if(0 > recv(fd, data, data_siz, 0)){
         return __err_new_sys();
     }
@@ -422,6 +421,7 @@ _recv(_i fd, void *data, size_t data_siz){
 
 static Error *
 _send(_i fd, void *data, ssize_t data_siz){
+    __check_nil(data);
     if(data_siz > send(fd, data, data_siz, 0)){
         return __err_new_sys();
     }
@@ -431,6 +431,7 @@ _send(_i fd, void *data, ssize_t data_siz){
 
 static Error *
 connected_sendmsg(_i fd, struct iovec *vec, size_t vec_cnt){
+    __check_nil(vec);
     struct msghdr msg = {
         .msg_name = nil,
         .msg_namelen = 0,
@@ -490,6 +491,7 @@ fd_trans_init(struct FdTransEnv *env){
 //    - following send_fd(_) can reuse it
 static Error *
 send_fd(struct FdTransEnv *env, const _i unix_fd, const _i fd_to_send){
+    __check_nil(env);
     //write data
     *(_i *)CMSG_DATA(env->cmsg) = fd_to_send;
 
@@ -510,8 +512,7 @@ send_fd(struct FdTransEnv *env, const _i unix_fd, const _i fd_to_send){
 //    - following recv_fd(_) can reuse it
 static Error *
 recv_fd(struct FdTransEnv *env, const _i unix_fd, _i *fd_to_recv){
-    //*(_i *)CMSG_DATA(CMSG_FIRSTHDR(&env->msg)) = -1;
-
+    __check_nil(env&&fd_to_recv);
     //at least 1 byte data
     if (1 > recvmsg(unix_fd, &env->msg, 0)){
         return __err_new_sys();

@@ -1,9 +1,9 @@
 #include "regexp.h"
 #include <string.h>
 
-static Error *reg_init(const char *pattern, regex_t *reghdr) __prm_nonnull __mustuse;
-static void regresfree(struct RegexRes *final) __prm_nonnull;
-static Error * reg_match(const char *origstr, _i n, regex_t *reghdr, struct RegexRes *final) __prm_nonnull __mustuse;
+static Error *reg_init(const char *pattern, regex_t *reghdr) __mustuse;
+static void regresfree(struct RegexRes *final);
+static Error *reg_match(const char *origstr, _i n, regex_t *reghdr, struct RegexRes *final) __mustuse;
 
 struct Regexp regexp = {
     .init = reg_init,
@@ -16,6 +16,7 @@ struct Regexp regexp = {
 //@param reghdr[out]:
 static Error *
 reg_init(const char *pattern, regex_t *reghdr){
+    __check_nil(pattern&&reghdr);
     _i rv;
     if (0 != (rv = regcomp(reghdr, pattern, REG_EXTENDED))){
         char errbuf[256];
@@ -29,6 +30,7 @@ reg_init(const char *pattern, regex_t *reghdr){
 
 static void
 regresfree(struct RegexRes *final){
+    __check_nil_fatal(final);
     _i i;
     for(i = 0; i < final->cnt; ++i){
         free(final->res[i]);
@@ -42,6 +44,7 @@ regresfree(struct RegexRes *final){
 //@param res[out]:
 static Error *
 reg_match(const char *origstr, _i n, regex_t *reghdr, struct RegexRes *final){
+    __check_nil(origstr&&reghdr&&final);
     regmatch_t matched;
     char errbuf[256];
     _i rv, i;

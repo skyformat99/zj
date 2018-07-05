@@ -129,6 +129,12 @@ struct Error{
     }\
 }while(0)
 
+#define __check_nil_fatal(expr) do{\
+    if(!(expr)){\
+        __fatal("param can't be nil");\
+    }\
+}while(0)
+
 #define __check_fatal(__e, __expr) do{\
     if(nil != ((__e) = (__expr))){\
         __display_and_fatal(__e);\

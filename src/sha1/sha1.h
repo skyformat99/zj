@@ -18,8 +18,8 @@ struct SHA1{
 
     void (*once) (const void *, size_t, uint8_t[20]);
 
-    void (*gen) (void *, size_t, char[41]);
-    Error *(*file) (char *, char res[41]);
+    Error *(*gen) (void *, size_t, char[41]) __mustuse;
+    Error *(*file) (char *, char res[41]) __mustuse;
 };
 
 struct SHA1 sha1;

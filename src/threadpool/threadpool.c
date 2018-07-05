@@ -9,10 +9,12 @@
 
 #include <pthread.h>
 
-static void * meta_fn(void *_ __unuse);
+static void *meta_fn(void *_ __unuse);
 static void task_new(void * (*) (void *), void *);
 
-struct ThreadPool threadpool = { .addjob = task_new };
+struct ThreadPool threadpool = {
+    .addjob = task_new,
+};
 
 struct ThreadTask {
     pthread_cond_t cond_var;

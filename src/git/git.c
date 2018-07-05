@@ -27,13 +27,13 @@ static Error *clone(git_repository **hdr, const char *repo_addr, const char *loc
 static Error *fetch(git_repository *hdr, const char *addr, char **refs, _i refscnt) __mustuse;
 static Error *push(git_repository *hdr, const char *addr, char **refs, _i refscnt) __mustuse;
 
-static Error *create_branch_local(git_repository *hdr, const char *bname, const char *base_ref) __mustuse;
-static Error *del_branch_local(git_repository *hdr, const char *bname) __mustuse;
+static Error *create_branch_local(git_repository *hdr, const char *branchname, const char *base_ref) __mustuse;
+static Error *del_branch_local(git_repository *hdr, const char *branchname) __mustuse;
 static Error *rename_branch_local(git_repository *hdr, const char *oldname, const char *newname) __mustuse;
-static Error *switch_branch_local(git_repository *hdr, const char *bname) __mustuse;
+static Error *switch_branch_local(git_repository *hdr, const char *branchname) __mustuse;
 
-static Error *branch_exists(git_repository *hdr, const char *bname, _i *res) __mustuse;
-static Error *branch_is_head(git_repository *hdr, const char *bname, _i *res) __mustuse;
+static Error *branch_exists(git_repository *hdr, const char *branchname, _i *res) __mustuse;
+static Error *branch_is_head(git_repository *hdr, const char *branchname, _i *res) __mustuse;
 
 static Error *gen_walker(git_revwalk **walker, git_object **obj, git_repository *hdr, const char *ref, _i sort_mode) __mustuse;
 static void revwalker_free(git_revwalk *walker, git_object *obj);
@@ -44,7 +44,7 @@ static void commit_free(git_commit *commit);
 static time_t get_commit_ts(git_commit *commit);
 static const char *get_commit_msg(git_commit *commit) __mustuse;
 
-static Error *do_commit(git_repository *hdr, const char *bname, const char *msg) __mustuse;
+static Error *do_commit(git_repository *hdr, const char *branchname, const char *msg) __mustuse;
 
 struct Git git = {
     .env_init = global_env_init,
@@ -342,13 +342,13 @@ push(git_repository *hdr, const char *url, char **refs, _i refscnt){
  */
 
 //@param hdr[in]:
-//@param bname[in]: branch name to check
+//@param branchname[in]: branch name to check
 //@param res[out]: 0 for false, 1 for true
 static Error *
-branch_exists(git_repository *hdr, const char *bname, _bool *res){
-    __check_nil(hdr&&bname&&res);
+branch_exists(git_repository *hdr, const char *branchname, _bool *res){
+    __check_nil(hdr&&branchname&&res);
     git_reference *branch;
-    if(0 != (*res = git_branch_lookup(&branch, hdr, bname, GIT_BRANCH_LOCAL))){
+    if(0 != (*res = git_branch_lookup(&branch, hdr, branchname, GIT_BRANCH_LOCAL))){
         if(GIT_ENOTFOUND == *res){
             *res = 0;
             return nil;
@@ -362,13 +362,13 @@ branch_exists(git_repository *hdr, const char *bname, _bool *res){
 }
 
 //@param hdr[in]:
-//@param bname[in]: branch name to check
+//@param branchname[in]: branch name to check
 //@param res[out]: 0 for false, 1 for true
 static Error *
-branch_is_head(git_repository *hdr, const char *bname, _bool *res){
-    __check_nil(hdr&&bname&&res);
+branch_is_head(git_repository *hdr, const char *branchname, _bool *res){
+    __check_nil(hdr&&branchname&&res);
     git_reference *branch;
-    if(0 != (*res = git_branch_lookup(&branch, hdr, bname, GIT_BRANCH_LOCAL))){
+    if(0 != (*res = git_branch_lookup(&branch, hdr, branchname, GIT_BRANCH_LOCAL))){
         return __err_new_git();
     }
 
@@ -380,11 +380,11 @@ branch_is_head(git_repository *hdr, const char *bname, _bool *res){
 }
 
 //@param hdr[in]:
-//@param bname[in]: new branch name to create
+//@param branchname[in]: new branch name to create
 //@param base_ref[int]: "HEAD" OR refs/heads/<refname> OR sha1_str<40bytes + '\0'>
 static Error *
-create_branch_local(git_repository *hdr, const char *bname, const char *base_ref){
-    __check_nil(hdr&&bname&&base_ref);
+create_branch_local(git_repository *hdr, const char *branchname, const char *base_ref){
+    __check_nil(hdr&&branchname&&base_ref);
     git_reference *newbranch;
     git_commit *commit;
     git_oid baseoid;
@@ -410,7 +410,7 @@ create_branch_local(git_repository *hdr, const char *bname, const char *base_ref
     }
 
     //create new branch
-    if(0 != git_branch_create(&newbranch, hdr, bname, commit, 0)){
+    if(0 != git_branch_create(&newbranch, hdr, branchname, commit, 0)){
         git_commit_free(commit);
         return __err_new_git();
     }
@@ -422,14 +422,14 @@ create_branch_local(git_repository *hdr, const char *bname, const char *base_ref
 }
 
 //@param hdr[in]:
-//@param bname[in]: branch to delete
+//@param branchname[in]: branch to delete
 static Error *
-del_branch_local(git_repository *hdr, const char *bname){
-    __check_nil(hdr&&bname);
+del_branch_local(git_repository *hdr, const char *branchname){
+    __check_nil(hdr&&branchname);
     git_reference *branch;
     _i rv;
 
-    if(0 != (rv = git_branch_lookup(&branch, hdr, bname, GIT_BRANCH_LOCAL))){
+    if(0 != (rv = git_branch_lookup(&branch, hdr, branchname, GIT_BRANCH_LOCAL))){
         if(GIT_ENOTFOUND == rv){
             return nil;
         }else{
@@ -478,14 +478,14 @@ rename_branch_local(git_repository *hdr, const char *oldname, const char *newnam
 }
 
 //@param hdr[in]:
-//@param bname[in]: branch to switch to
+//@param branchname[in]: branch to switch to
 static Error *
-switch_branch_local(git_repository *hdr, const char *bname){
-    __check_nil(hdr&&bname);
+switch_branch_local(git_repository *hdr, const char *branchname){
+    __check_nil(hdr&&branchname);
 
     git_reference *branch;
 
-    if(0 != git_branch_lookup(&branch, hdr, bname, GIT_BRANCH_LOCAL)){
+    if(0 != git_branch_lookup(&branch, hdr, branchname, GIT_BRANCH_LOCAL)){
         return __err_new_git();
     }
 
@@ -520,8 +520,8 @@ revwalker_free(git_revwalk *revwalker, git_object *revobj){
 //@param ref[in]: usually a branch name
 //@param sort_mode[in]:
 static Error *
-gen_walker(git_revwalk **revwalker, git_object **revobj, git_repository *hdr, const char *bname, _i sort_mode){
-    __check_nil(revwalker&&revobj&&hdr&&bname);
+gen_walker(git_revwalk **revwalker, git_object **revobj, git_repository *hdr, const char *branchname, _i sort_mode){
+    __check_nil(revwalker&&revobj&&hdr&&branchname);
 
     if(0 != git_revwalk_new(revwalker, hdr)){
         return __err_new_git();
@@ -531,7 +531,7 @@ gen_walker(git_revwalk **revwalker, git_object **revobj, git_repository *hdr, co
     sort_mode = (0 == sort_mode) ? GIT_SORT_TIME : GIT_SORT_TIME|GIT_SORT_REVERSE;
     git_revwalk_sorting(*revwalker, sort_mode);
 
-    if(0 != git_revparse_single(revobj, hdr, bname)){
+    if(0 != git_revparse_single(revobj, hdr, branchname)){
         revwalker_free(*revwalker, *revobj);
         return __err_new_git();
     }
@@ -594,12 +594,12 @@ commit_free(git_commit *commit){
  *     && git add $path
  *     && git commit --allow-empty -m "_"
  * @param hdr[in]:
- * @param bname[in]: refs/heads/xxx
+ * @param branchname[in]: refs/heads/xxx
  * @param commit_msg[in]: user's commit msg
  */
 static Error *
-do_commit(git_repository *hdr, const char *bname, const char *commit_msg){
-    __check_nil(hdr&&bname&&commit_msg);
+do_commit(git_repository *hdr, const char *branchname, const char *commit_msg){
+    __check_nil(hdr&&branchname&&commit_msg);
     _i rv;
 
     git_index* index;
@@ -640,7 +640,7 @@ do_commit(git_repository *hdr, const char *bname, const char *commit_msg){
     }
 
     //get parent's commit_oid, OR create a new branch
-    if(0 == (rv = git_reference_name_to_id(&parent_oid, hdr, bname))){
+    if(0 == (rv = git_reference_name_to_id(&parent_oid, hdr, branchname))){
         if(0 != git_commit_lookup(&parent_commit, hdr, &parent_oid)){
             git_index_free(index);
             return __err_new_git();
@@ -686,7 +686,7 @@ do_commit(git_repository *hdr, const char *bname, const char *commit_msg){
     }
 
     //associate newly created tree and parent_commits, write to disk
-    if(0 != git_commit_create(&commit_oid, hdr, bname, me, me, "UTF-8", commit_msg, tree, parent_cnt, parent_commits)){
+    if(0 != git_commit_create(&commit_oid, hdr, branchname, me, me, "UTF-8", commit_msg, tree, parent_cnt, parent_commits)){
         git_signature_free(me);
         git_tree_free(tree);
         if(nil != parent_commit){

@@ -39,6 +39,7 @@ http_serv_clean(void){
 //@param urlstr[in]: http://[::1]:9000
 static Error *
 http_start_server(const char *urlstr){
+    __check_nil(urlstr);
     _i rv;
     if(0 != (rv = nng_url_parse(&server.url, urlstr))){
         return __err_new(rv, nng_strerror(rv), nil);
@@ -65,6 +66,7 @@ http_start_server(const char *urlstr){
 //@method: "POST"/"GET"/nil, if nil, will accept all methods
 Error *
 http_serv_hdr_register(const char *path, void (*cb) (nng_aio *prm), const char *method){
+    __check_nil(path&&cb&&method);
     _i rv;
     pthread_mutex_lock(&server.mlock);
 

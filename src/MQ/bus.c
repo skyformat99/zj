@@ -4,12 +4,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-static Error * new(nng_socket *sock);
-static Error * listen(const char *self_id, nng_socket *sock);
-static Error * dial(nng_socket sock, const char *remote_id);
+static Error *new(nng_socket *sock);
+static Error *listen(const char *selfurl, nng_socket *sock);
+static Error *dial(nng_socket sock, const char *remoteurl);
 
-static Error * send(nng_socket sock, void *data, size_t data_len);
-static Error * recv(nng_socket sock, Source *s);
+static Error *send(nng_socket sock, void *data, size_t data_len);
+static Error *recv(nng_socket sock, Source *s);
 
 struct Bus bus = {
     .new = new,
@@ -22,6 +22,7 @@ struct Bus bus = {
 //@param sock[out]: created handler
 static Error *
 new(nng_socket *sock){
+    __check_nil(sock);
     _i e = nng_bus0_open(sock);
     if (0 == e) {
         return nil;
@@ -30,14 +31,15 @@ new(nng_socket *sock){
     }
 }
 
-//@param self_id[in]: handler name
+//@param selfurl[in]: handler name
 //@param sock[in]:
 static Error *
-listen(const char *self_id, nng_socket *sock){
+listen(const char *selfurl, nng_socket *sock){
+    __check_nil(selfurl&&sock);
     _i eno;
     nng_listener l;
 
-    eno = nng_listener_create(&l, *sock, self_id);
+    eno = nng_listener_create(&l, *sock, selfurl);
     if (0 != eno) {
         return __err_new(eno, nng_strerror(eno), nil);
     }
@@ -56,8 +58,9 @@ listen(const char *self_id, nng_socket *sock){
 //@param id[in]: handler name
 //@param sock[in]:
 static Error *
-dial(nng_socket sock, const char *remote_id){
-    _i e = nng_dial(sock, remote_id, NULL, 0);
+dial(nng_socket sock, const char *remoteurl){
+    __check_nil(remoteurl);
+    _i e = nng_dial(sock, remoteurl, NULL, 0);
     if (0 == e) {
         return nil;
     } else {
@@ -70,6 +73,7 @@ dial(nng_socket sock, const char *remote_id){
 //@param data_len[in]: len of data
 static Error *
 send(nng_socket sock, void *data, size_t data_len){
+    __check_nil(data);
     _i e = nng_send(sock, data, data_len, 0);
     if (0 != e) {
         return __err_new(e, nng_strerror(e), nil);
@@ -82,6 +86,7 @@ send(nng_socket sock, void *data, size_t data_len){
 //@param data_len[out]: actual len of recved data
 static Error *
 recv(nng_socket sock, Source *s){
+    __check_nil(s);
     _i e;
     if(nil == s){
         //only for info purpose!

@@ -8,7 +8,7 @@ char res[41];
 
 void
 sha1_mem_contents(void){
-    sha1.gen(__str_orig, sizeof(__str_orig) - 1, res);
+    (void)sha1.gen(__str_orig, sizeof(__str_orig) - 1, res);
     So(0, strcmp(res, __res_lowercase));
 }
 
@@ -23,7 +23,7 @@ sha1_one_file(void){
         __fatal(strerror(errno));
     }
 
-    sha1.file("/tmp/x.txt", res);
+    (void)sha1.file("/tmp/x.txt", res);
     So(0, strcmp(res, __res_lowercase));
 
     unlink("/tmp/x.txt");

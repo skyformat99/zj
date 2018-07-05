@@ -15,9 +15,9 @@
 
 #define __http_req_max_body_siz 1 * 1024 * 1024 //1MB
 
-static Error *http_get(const char *urlstr, Source *s, _i *status_code) __prm_nonnull __mustuse;
-static Error *http_post(const char *urlstr, Source *s, _i *status_code) __prm_nonnull __mustuse;
-static Error *http_req(const char *urlstr, const char *method, Source *s, _i *status_code) __prm_nonnull __mustuse;
+static Error *http_get(const char *urlstr, Source *s, _i *status_code) __mustuse;
+static Error *http_post(const char *urlstr, Source *s, _i *status_code) __mustuse;
+static Error *http_req(const char *urlstr, const char *method, Source *s, _i *status_code) __mustuse;
 
 struct HttpCli httpcli = {
     .get = http_get,
@@ -55,6 +55,7 @@ HttpCliFlow_clean(struct HttpCliFlow *c){
 //@param status_code[out]:http status, 200/400/500...
 static Error *
 http_req(const char *urlstr, const char *method, Source *s, _i *status_code){
+    __check_nil(urlstr&&method&&s&&status_code);
     __drop(HttpCliFlow_clean)
     struct HttpCliFlow cl = { nil, nil, nil, nil, nil, nil };
     _i rv = 0;

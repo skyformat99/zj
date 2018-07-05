@@ -3,11 +3,8 @@
 
 #define __ssherr_new(__hdr) __err_new(ssh_get_error_code(__hdr), ssh_get_error(__hdr), nil)
 
-static Error *
-exec_once(char *cmd, _i *exit_status, Source *cmdout, char *host, _i port, char *username, time_t conn_timeout_secs);
-
-static Error *
-exec_once_default(char *cmd, char *host, _i port, char *username);
+static Error * exec_once(char *cmd, _i *exit_status, Source *cmdout, char *host, _i port, char *username, time_t conn_timeout_secs);
+static Error * exec_once_default(char *cmd, char *host, _i port, char *username);
 
 struct SSH ssh = {
     .exec = exec_once,
@@ -28,10 +25,7 @@ multi_threads_env_init(void) {
 
 static void
 session_drop(ssh_session *session){
-    if(nil == *session){
-        return;
-    }
-
+    if(nil == *session){ return; }
     if(ssh_is_connected(*session)){
         ssh_disconnect(*session);
     }
@@ -42,10 +36,7 @@ session_drop(ssh_session *session){
 
 static void
 channel_drop(ssh_channel *channel){
-    if(nil == *channel){
-        return;
-    }
-
+    if(nil == *channel){ return; }
     if(!ssh_channel_is_closed(*channel)){
         ssh_channel_close(*channel);
     }
@@ -68,8 +59,8 @@ exec_once_default(char *cmd, char *host, _i port, char *username) {
 //@param exit_status[out]: the exit_status of `cmd`
 //@param cmdout[out]: the stdout and stderr output of `cmd`
 static Error *
-exec_once(char *cmd, _i *exit_status, Source *cmdout,
-        char *host, _i port, char *username, time_t conn_timeout_secs) {
+exec_once(char *cmd, _i *exit_status, Source *cmdout, char *host, _i port, char *username, time_t conn_timeout_secs){
+    __check_nil(cmd&&host&&port&&username);
     __drop(session_drop) ssh_session session = ssh_new();
     if(nil == session){
         return __err_new(-1, "create ssh_session failed", nil);
