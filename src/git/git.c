@@ -239,6 +239,7 @@ git_remote_drop(git_remote **remote_hdr){
 //@param repo_hdr[in]: repo hdr
 //@param addr[in]: source repo addr, a remote url OR a local path
 //@param refs[in]: branchs to fetch
+//    !!!! form MUST be: "+refs/heads/master:refs/heads/test"
 //@param refscnt[in]: cnt of refs
 static Error *
 fetch(git_repository *repo_hdr, const char *addr, char **refs, _i refscnt){
@@ -271,6 +272,7 @@ fetch(git_repository *repo_hdr, const char *addr, char **refs, _i refscnt){
 //@param repo_hdr[in]: repo hdr
 //@param addr[in]: source repo addr, a remote url OR a local path
 //@param refs[in]: branchs to fetch
+//    !!!! form MUST be: "+refs/heads/master:refs/heads/test"
 //@param refscnt[in]: cnt of refs
 static Error *
 push(git_repository *repo_hdr, const char *addr, char **refs, _i refscnt){

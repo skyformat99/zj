@@ -102,14 +102,14 @@ _do_commit(git_repository *hdr){
 void
 _push(void){
     Error *e;
-    char *rmbranch[1] = {"+refs/heads/master:/refs/heads/master"};
+    char *rmbranch[1] = {"+refs/heads/master:refs/heads/test"};
     __check_fatal(e, git.push(repo_hdr2, repo_url, rmbranch, 1));
 }
 
 void
 _fetch(void){
     Error *e;
-    char *rmbranch[1] = {"refs/heads/master"};
+    char *rmbranch[1] = {"+refs/heads/master:refs/heads/test"};
     __check_fatal(e, git.fetch(repo_hdr2, repo_url, rmbranch, 1));
 }
 
@@ -137,22 +137,29 @@ main(void){
         _do_commit(repo_hdr2);
         _push();
 
+        _fetch();
+
         git.repo_close(repo_hdr2);
         git.env_clean();
 
         waitpid(pid, nil, 0);
     }else{
-        _mkdir_and_create_file(repo_path, "file");
-        _mkdir_and_create_file(repo_path, "file1");
-        _mkdir_and_create_file(repo_path, "file2");
-        _mkdir_and_create_file(repo_path, "file3");
-
         _env_init();
 
         _repo_init(&repo_hdr, repo_path);
         _config_name_and_email();
         _repo_open(&repo_hdr, repo_path);
+
+        _mkdir_and_create_file(repo_path, "file");
         _do_commit(repo_hdr);
+
+        sleep(1);
+
+        _mkdir_and_create_file(repo_path, "file1");
+        _mkdir_and_create_file(repo_path, "file2");
+        _mkdir_and_create_file(repo_path, "file3");
+        _do_commit(repo_hdr);
+
         git.repo_close(repo_hdr);
         git.env_clean();
     }
