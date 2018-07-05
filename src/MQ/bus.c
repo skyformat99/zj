@@ -86,7 +86,6 @@ send(nng_socket sock, void *data, size_t data_len){
 //@param data_len[out]: actual len of recved data
 static Error *
 recv(nng_socket sock, Source *s){
-    __check_nil(s);
     _i e;
     if(nil == s){
         //only for info purpose!
