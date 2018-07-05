@@ -64,7 +64,7 @@ _repo_init(git_repository **hdr, const char *path){
 void
 _config_name_and_email(){
     char ***kv = __alloc(2 * sizeof(char **));
-    char *kv0[2] = {"user.name", getenv("USER")};
+    char *kv0[2] = {"user.name", username};
     char *kv1[2] = {"user.email", "@163.com"};
     kv[0] = kv0;
     kv[1] = kv1;
@@ -76,7 +76,7 @@ _config_name_and_email(){
     free(kv);
 
     __check_fatal(e, git.get_cfg("user.name", &value));
-    So(0, strcmp("x", value));
+    So(0, strcmp(username, value));
     free(value);
 
     __check_fatal(e, git.get_cfg("user.email", &value));
