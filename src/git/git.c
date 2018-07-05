@@ -580,7 +580,7 @@ do_commit(git_repository *repo_hdr, const char *branch_name, const char *msg){
     }
 
     //git add file
-    static char *path[1] = {"*"};
+    static char *path[1] = {"."};
     git_strarray paths;
     paths.strings = path;
     paths.count = 1;
