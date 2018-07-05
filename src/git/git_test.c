@@ -7,7 +7,7 @@
 #define __err_new_git() __err_new(-1, nil == giterr_last() ? "error without message" : giterr_last()->message, nil)
 
 char *repo_path = "/tmp/__gitdir";
-const char *repo_url = "ssh://fh@localhost/tmp/__gitdir/.git";
+const char *repo_url = "ssh://x@localhost/tmp/__gitdir/.git";
 char *repo_path2 = "/tmp/__gitdir2";
 const char *repo_url2 = "/tmp/__gitdir2/.git";
 git_repository *repo_hdr;
@@ -50,8 +50,8 @@ _repo_init(git_repository **hdr, const char *path){
 void
 _config_name_and_email(){
     char ***kv = __alloc(2 * sizeof(char **));
-    char *kv0[2] = {"user.name", "fh"};
-    char *kv1[2] = {"user.email", "fh@163.com"};
+    char *kv0[2] = {"user.name", "x"};
+    char *kv1[2] = {"user.email", "x@163.com"};
     kv[0] = kv0;
     kv[1] = kv1;
 
@@ -70,13 +70,13 @@ _config_name_and_email(){
         e = __err_new_git();
         __display_and_fatal(e);
     }
-    So(0, strcmp("fh", v->value));
+    So(0, strcmp("x", v->value));
     v->free(v);
     if(0 > git_config_get_entry(&v, cfg, "user.email")){
         e = __err_new_git();
         __display_and_fatal(e);
     }
-    So(0, strcmp("fh@163.com", v->value));
+    So(0, strcmp("x@163.com", v->value));
     v->free(v);
 }
 

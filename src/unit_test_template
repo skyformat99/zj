@@ -12,7 +12,7 @@ fi
 
 sysld_path="-lpthread -lgit2"
 if [[ 0 -lt `uname -r|grep -c '^2.6.'` ]]; then
-    sysld_path="-lpthread -lrt"
+    sysld_path=${sysld_path}" -lrt"
 fi
 
 # **** #

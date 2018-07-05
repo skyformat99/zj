@@ -231,7 +231,6 @@ clone(git_repository **hdr, const char *repo_addr, const char *local_path){
 static void
 git_remote_drop(git_remote **remote_hdr){
     if(nil != *remote_hdr){
-        git_remote_disconnect(*remote_hdr);
         git_remote_free(*remote_hdr);
     }
 }
@@ -250,24 +249,18 @@ fetch(git_repository *repo_hdr, const char *addr, char **refs, _i refscnt){
         return __err_new_git();
     };
 
-    //connect to remote
-    git_remote_callbacks opt;  // = GIT_REMOTE_CALLBACKS_INIT;
-    git_remote_init_callbacks(&opt, GIT_REMOTE_CALLBACKS_VERSION);
-    opt.credentials = cred_cb;
-
-    if(0 > git_remote_connect(remote_hdr, GIT_DIRECTION_FETCH, &opt, nil, nil)){
-        return __err_new_git();
-    }
-
     git_strarray refs_array;
     refs_array.strings = refs;
     refs_array.count = refscnt;
 
-    git_fetch_options opts;  // = GIT_FETCH_OPTIONS_INIT;
-    git_fetch_init_options(&opts, GIT_FETCH_OPTIONS_VERSION);
+    git_remote_callbacks remote_opt = GIT_REMOTE_CALLBACKS_INIT;
+    remote_opt.credentials = cred_cb;
+
+    git_fetch_options fetch_opt = GIT_FETCH_OPTIONS_INIT;
+    fetch_opt.callbacks = remote_opt;
 
     //do the fetch
-    if(0 > git_remote_fetch(remote_hdr, &refs_array, &opts, nil)){
+    if(0 > git_remote_fetch(remote_hdr, &refs_array, &fetch_opt, nil)){
         return __err_new_git();
     }
 
@@ -288,25 +281,19 @@ push(git_repository *repo_hdr, const char *addr, char **refs, _i refscnt){
         return __err_new_git();
     };
 
-    //connect to remote
-    git_remote_callbacks opt;  // = GIT_REMOTE_CALLBACKS_INIT;
-    git_remote_init_callbacks(&opt, GIT_REMOTE_CALLBACKS_VERSION);
-    opt.credentials = cred_cb;
-
-    if(0 > git_remote_connect(remote_hdr, GIT_DIRECTION_PUSH, &opt, nil, nil)){
-        __err_new_git();
-    }
-
     git_strarray refs_array;
     refs_array.strings = refs;
     refs_array.count = refscnt;
 
-    git_push_options opts;  // = GIT_PUSH_OPTIONS_INIT;
-    git_push_init_options(&opts, GIT_PUSH_OPTIONS_VERSION);
-    opts.pb_parallelism = 1; //max threads to use in one push_ops
+    git_remote_callbacks remote_opt = GIT_REMOTE_CALLBACKS_INIT;
+    remote_opt.credentials = cred_cb;
+
+    git_push_options push_opt = GIT_PUSH_OPTIONS_INIT;
+    push_opt.pb_parallelism = 1; //max threads to use in one push_ops
+    push_opt.callbacks = remote_opt;
 
     //do the push
-    if(0 > git_remote_upload(remote_hdr, &refs_array, &opts)){
+    if(0 > git_remote_push(remote_hdr, &refs_array, &push_opt)){
         return __err_new_git();
     }
 
