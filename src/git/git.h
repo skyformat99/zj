@@ -9,7 +9,9 @@ struct Git{
     void (*env_clean) (void);
 
     Error *(*repo_init) (git_repository **hdr, const char *path) __prm_nonnull __mustuse;
+
     Error *(*config) (char *(*kv[2]), _i kv_n) __prm_nonnull __mustuse;
+    Error *(*get_cfg) (const char *key, char **value);
 
     Error *(*repo_open) (git_repository **hdr, const char *addr) __prm_nonnull __mustuse;
     void (*repo_close) (git_repository *hdr) __prm_nonnull;

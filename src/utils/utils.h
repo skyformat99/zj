@@ -34,6 +34,8 @@
 
 #define __drop(cb) __attribute__ ((cleanup(cb))) // release object when it is out of scope
 
+#define _bool int
+
 #define _si short int
 #define _usi unsigned short int
 
@@ -123,7 +125,7 @@ struct Error{
 
 #define __check_nil(expr) do{\
     if(!(expr)){\
-        return __err_new(-1, "param can't be nil");\
+        return __err_new(-1, "param can't be nil", nil);\
     }\
 }while(0)
 

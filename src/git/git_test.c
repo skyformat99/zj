@@ -1,8 +1,10 @@
 #include "git.c"
-#include "utils.c"
 #include "os.c"
+#include "utils.c"
+
 #include <fcntl.h>
 #include <sys/wait.h>
+#include <semaphore.h>
 
 #define __err_new_git() __err_new(-1, nil == giterr_last() ? "error without message" : giterr_last()->message, nil)
 
@@ -17,12 +19,12 @@ char *repo_url;
 
 __init void
 hahahaha(void){
-	if(nil == (username = getenv("USER"))){
-		__fatal_sys();
-	}
+    if(nil == (username = getenv("USER"))){
+        __fatal_sys();
+    }
 
-	repo_url = __alloc(strlen(username) + sizeof("ssh://@localhost/tmp/__gitdir/.git"));
-	sprintf(repo_url, "ssh://%s@localhost/tmp/__gitdir/.git", username);
+    repo_url = __alloc(strlen(username) + sizeof("ssh://@localhost/tmp/__gitdir/.git"));
+    sprintf(repo_url, "ssh://%s@localhost/tmp/__gitdir/.git", username);
 }
 
 void
@@ -68,28 +70,18 @@ _config_name_and_email(){
     kv[1] = kv1;
 
     Error *e;
+    char *value;
+
     __check_fatal(e, git.config(kv, 2));
     free(kv);
 
-    git_config *cfg;
-    if(0 > git_config_open_default(&cfg)){
-        e = __err_new_git();
-        __display_and_fatal(e);
-    }
+    __check_fatal(e, git.get_cfg("user.name", &value));
+    So(0, strcmp("x", value));
+    free(value);
 
-    git_config_entry *v;
-    if(0 > git_config_get_entry(&v, cfg, "user.name")){
-        e = __err_new_git();
-        __display_and_fatal(e);
-    }
-    So(0, strcmp("x", v->value));
-    v->free(v);
-    if(0 > git_config_get_entry(&v, cfg, "user.email")){
-        e = __err_new_git();
-        __display_and_fatal(e);
-    }
-    So(0, strcmp("@163.com", v->value));
-    v->free(v);
+    __check_fatal(e, git.get_cfg("user.email", &value));
+    So(0, strcmp("@163.com", value));
+    free(value);
 }
 
 void
@@ -130,14 +122,23 @@ main(void){
     (void)os.rm_all(repo_path);
     (void)os.rm_all(repo_path2);
 
+    sem_t *sem[2];
+    if(SEM_FAILED == (sem[0] = sem_open("/__gittstsem", O_CREAT|O_RDWR, 0600))){
+        __fatal_sys();
+    }
+    if(SEM_FAILED == (sem[1] = sem_open("/__gittstsem2", O_CREAT|O_RDWR, 0600))){
+        __fatal_sys();
+    }
+
     pid_t pid = fork();
     if(0 > pid){
         __fatal_sys();
     }else if(0 < pid){
         _env_init();
 
-        sleep(1);
+        sem_wait(sem[0]);
         _clone();
+        sem_post(sem[1]);
 
         _repo_open(&repo_hdr2, repo_path2);
 
@@ -149,11 +150,14 @@ main(void){
         _do_commit(repo_hdr2);
         _push();
 
+        sem_wait(sem[0]);
         _fetch();
 
         git.repo_close(repo_hdr2);
         git.env_clean();
 
+        sem_close(sem[0]);
+        sem_close(sem[1]);
         waitpid(pid, nil, 0);
     }else{
         _env_init();
@@ -165,12 +169,15 @@ main(void){
         _mkdir_and_create_file(repo_path, "file");
         _do_commit(repo_hdr);
 
-        sleep(1);
+        sem_post(sem[0]);
+        sem_wait(sem[1]);
 
         _mkdir_and_create_file(repo_path, "file1");
         _mkdir_and_create_file(repo_path, "file2");
         _mkdir_and_create_file(repo_path, "file3");
         _do_commit(repo_hdr);
+
+        sem_post(sem[0]);
 
         git.repo_close(repo_hdr);
         git.env_clean();
