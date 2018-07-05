@@ -102,7 +102,7 @@ _do_commit(git_repository *hdr){
 void
 _push(void){
     Error *e;
-    char *rmbranch[1] = {"refs/heads/master"};
+    char *rmbranch[1] = {"+refs/heads/master:/refs/heads/master"};
     __check_fatal(e, git.push(repo_hdr2, repo_url, rmbranch, 1));
 }
 
@@ -121,23 +121,26 @@ main(void){
     pid_t pid = fork();
     if(0 > pid){
         __fatal_sys();
-    }else if(0 == pid){
+    }else if(0 < pid){
         _env_init();
 
         sleep(1);
         _clone();
 
-        _mkdir_and_create_file(repo_path2, "fileX");
         _repo_open(&repo_hdr2, repo_path2);
 
+        _mkdir_and_create_file(repo_path2, "fileX");
         _do_commit(repo_hdr2);
         _push();
 
+        _mkdir_and_create_file(repo_path2, "fileY");
         _do_commit(repo_hdr2);
         _push();
 
         git.repo_close(repo_hdr2);
         git.env_clean();
+
+        waitpid(pid, nil, 0);
     }else{
         _mkdir_and_create_file(repo_path, "file");
         _mkdir_and_create_file(repo_path, "file1");
@@ -152,7 +155,5 @@ main(void){
         _do_commit(repo_hdr);
         git.repo_close(repo_hdr);
         git.env_clean();
-
-        waitpid(pid, nil, 0);
     }
 }
