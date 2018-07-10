@@ -229,5 +229,7 @@ main(void){
 
         git.repo_close(repo_hdr);
         git.env_clean();
+
+        exit(0);
     }
 }
