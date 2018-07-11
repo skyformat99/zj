@@ -31,4 +31,4 @@ jump server written in C and raft.
 - 完善审计功能
 
 ## 前端模块示例
-![](前端模块示例.png)
+![](demo/前端模块示例.png)
