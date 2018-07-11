@@ -30,5 +30,5 @@ jump server written in C and raft.
 ## TODO
 - 完善审计功能
 
-## 前端模块示例
-![](demo/前端模块示例.png)
+## 前端模块设计示例
+![](demo/前端模块设计示例.png)
