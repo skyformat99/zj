@@ -6,6 +6,6 @@ cd ../src
 curdir=`pwd`
 for unit in `find ${curdir} -name "*_test.sh"`; do
     cd `dirname ${unit}`
-    echo "[*] ${unit}"
+    echo -e "\x1b[31;01m[*] ${unit}\x1b[00m"
     $unit
 done
