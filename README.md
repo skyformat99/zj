@@ -27,8 +27,8 @@ jump server written in C and raft.
 	- 测试代码量 > N * 正文代码量；
 	- 极少的依赖，极简的代码(Less code, More security!)。
 
-## TODO
-- 完善审计功能
-
 ## 前端模块设计示例
 ![](demo/前端模块设计示例.png)
+
+## TODO
+- 完善审计功能
