@@ -8,11 +8,11 @@ echo "export LC_ALL=en_US.UTF-8" >> ~/.bashrc
 echo "export ZJ_PATH=${HOME}/zj" >> ~/.bashrc
 
 perl -ane 'print "$F[1]:" if /^-L/' ${HOME}/zj/ccpath > /tmp/__z__ldpath
-echo "export LD_LIBRARY_PATH=`cat /tmp/__z__ldpath`." >> ~/.bashrc
+echo "export LD_LIBRARY_PATH=`cat /tmp/__z__ldpath`\${LD_LIBRARY_PATH}" >> ~/.bashrc
 rm /tmp/__z__ldpath
 
-source ~/.bashrc
-source /etc/profile
+. /etc/profile
+. ~/.bashrc
 
 curdir=`pwd`
 
